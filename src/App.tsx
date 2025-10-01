@@ -73,7 +73,7 @@ const initialCategories: Category[] = [
   },
   {
     id: 'lifestyle-recurring',
-    name: 'Lifestyle & recurring',
+    name: 'Recurring',
     accent: '#f472b6',
     description: 'Subscriptions and routines that make day-to-day life feel good.',
     transactions: [
@@ -93,7 +93,7 @@ const initialCategories: Category[] = [
   },
   {
     id: 'personal-family',
-    name: 'Personal & family',
+    name: 'Personal & Lifestyle',
     accent: '#facc15',
     description: 'The flexible spending for people, pets and shared experiences.',
     transactions: [
@@ -161,20 +161,6 @@ export default function App() {
       return;
     }
 
-    const targets: (Element | null)[] = [document.body, document.documentElement];
-
-    targets.forEach((element) => {
-      if (!element) return;
-
-      element.classList.toggle('money-drag', Boolean(dragState));
-    });
-
-    return () => {
-      targets.forEach((element) => {
-        if (!element) return;
-
-        element.classList.remove('money-drag');
-      });
     };
   }, [dragState]);
 
@@ -509,16 +495,6 @@ export default function App() {
             <span>Remove this transaction</span>
           </div>
         </div>
-      ) : null}
-
-      {pieData.slices.length > 0 ? (
-        <section className="chart-card">
-          <h2 className="chart-title">Where your money goes</h2>
-          <p className="chart-subtitle">Hover a slice to spotlight a category</p>
-          <div className="chart-wrapper">
-            <CategoryPieChart data={pieData.slices} total={pieData.total} formatCurrency={formatCurrency} />
-          </div>
-        </section>
       ) : null}
 
       <p className="footer-note">

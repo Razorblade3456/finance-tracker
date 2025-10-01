@@ -2,6 +2,7 @@ import { DragEvent as ReactDragEvent, useEffect, useMemo, useState } from 'react
 import { Category, CategoryKey, Transaction, TransactionCadence } from './types';
 import { CategoryColumn } from './components/CategoryColumn';
 import { TransactionForm } from './components/TransactionForm';
+import { CategoryPieChart } from './components/CategoryPieChart';
 
 const cadenceToMonthlyFactor: Record<TransactionCadence, number> = {
   Weekly: 4,
@@ -160,14 +161,6 @@ export default function App() {
       return;
     }
 
-    if (dragState) {
-      document.body.classList.add('money-drag');
-    } else {
-      document.body.classList.remove('money-drag');
-    }
-
-    return () => {
-      document.body.classList.remove('money-drag');
     };
   }, [dragState]);
 
@@ -400,6 +393,21 @@ export default function App() {
   };
 
   const netPrefix = summary.net >= 0 ? '+' : '-';
+
+  const pieData = useMemo(() => {
+    const slices = categories
+      .filter((category) => categoryMonthlyTotals[category.id] > 0)
+      .map((category) => ({
+        id: category.id,
+        name: category.name,
+        value: categoryMonthlyTotals[category.id],
+        accent: category.accent
+      }));
+
+    const total = slices.reduce((sum, slice) => sum + slice.value, 0);
+
+    return { slices, total };
+  }, [categories, categoryMonthlyTotals]);
 
   return (
     <div className="app-shell">

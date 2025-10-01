@@ -1,4 +1,5 @@
 export type CategoryKey =
+  | 'income'
   | 'financial-obligations'
   | 'lifestyle-recurring'
   | 'personal-family'

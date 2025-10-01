@@ -1,0 +1,23 @@
+* text=auto eol=lf
+
+# Common source formats should always diff as text
+*.ts text diff
+*.tsx text diff
+*.js text diff
+*.jsx text diff
+*.css text diff
+*.scss text diff
+*.html text diff
+*.json text diff
+*.md text diff
+*.svg text diff
+
+# Explicit binary assets stay binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.ttf binary
+*.otf binary

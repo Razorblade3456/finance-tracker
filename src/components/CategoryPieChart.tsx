@@ -15,8 +15,8 @@ interface CategoryPieChartProps {
 
 const TWO_PI = Math.PI * 2;
 const CENTER = 110;
-const BASE_OUTER_RADIUS = 94;
-const BASE_INNER_RADIUS = 64;
+const BASE_OUTER_RADIUS = 92;
+const BASE_INNER_RADIUS = 60;
 const ACTIVE_GROWTH = 6;
 const ACTIVE_OFFSET = 10;
 
@@ -99,9 +99,15 @@ export function CategoryPieChart({
 
   const activeSlice = slices.find((slice) => slice.id === hoveredId) ?? null;
 
+  const centerPercentage = activeSlice ? activeSlice.percentage : 100;
+  const centerLabel = activeSlice ? activeSlice.name : defaultLabel;
+  const centerAmount = activeSlice
+    ? formatCurrency(activeSlice.value)
+    : formatCurrency(totalValue);
+
   return (
-    <div className="pie-chart" role="img" aria-label={ariaLabel}>
-      <svg viewBox="0 0 220 220" className="pie-chart-svg">
+    <div className="donut-chart" role="img" aria-label={ariaLabel}>
+      <svg viewBox="0 0 220 220" className="donut-chart-svg">
         <defs>
           <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
             <feGaussianBlur stdDeviation="3" result="coloredBlur" />
@@ -147,39 +153,37 @@ export function CategoryPieChart({
                 stroke={isActive ? 'rgba(15, 23, 42, 0.12)' : 'none'}
                 strokeWidth={isActive ? 1 : 0}
                 strokeLinejoin="round"
-                className={`pie-slice ${isActive ? 'active' : ''}`}
+                className={`donut-slice ${isActive ? 'active' : ''}`}
                 style={{ filter: isActive ? 'url(#glow)' : 'none' }}
               />
             </g>
           );
         })}
-        <circle cx={CENTER} cy={CENTER} r={BASE_INNER_RADIUS - 4} className="pie-center" />
-        {activeSlice ? (
-          <text x="110" y="102" textAnchor="middle" className="pie-value">
-            {formatCurrency(activeSlice.value)}
-          </text>
-        ) : (
-          <text x="110" y="102" textAnchor="middle" className="pie-value">
-            {formatCurrency(totalValue)}
-          </text>
-        )}
-        <text x="110" y="124" textAnchor="middle" className="pie-label">
-          {activeSlice ? activeSlice.name : defaultLabel}
+        <circle cx={CENTER} cy={CENTER} r={BASE_INNER_RADIUS - 6} className="donut-center" />
+        <text x="110" y="98" textAnchor="middle" className="donut-percentage">
+          {Math.round(centerPercentage)}%
+        </text>
+        <text x="110" y="118" textAnchor="middle" className="donut-label">
+          {centerLabel}
+        </text>
+        <text x="110" y="138" textAnchor="middle" className="donut-amount">
+          {centerAmount}
         </text>
       </svg>
-      <ul className="pie-legend">
+      <ul className="donut-legend">
         {slices.map((slice) => (
           <li
             key={slice.id}
-            className={`pie-legend-item ${hoveredId === slice.id ? 'active' : ''}`}
+            className={`donut-legend-item ${hoveredId === slice.id ? 'active' : ''}`}
             onMouseEnter={() => setHoveredId(slice.id)}
             onMouseLeave={() => setHoveredId(null)}
           >
-            <span className="pie-legend-swatch" style={{ background: slice.accent }} />
-            <span className="pie-legend-text">
+            <span className="donut-legend-swatch" style={{ background: slice.accent }} />
+            <span className="donut-legend-text">
               <strong>{slice.name}</strong>
-              <span>
-                {formatCurrency(slice.value)} • {slice.percentage.toFixed(1)}%
+              <span className="donut-legend-meta">
+                <span>{slice.percentage.toFixed(1)}%</span>
+                <span>{formatCurrency(slice.value)}</span>
               </span>
             </span>
           </li>

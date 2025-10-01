@@ -2,7 +2,7 @@ import { DragEvent as ReactDragEvent, useEffect, useMemo, useState } from 'react
 import { Category, CategoryKey, Transaction, TransactionCadence } from './types';
 import { CategoryColumn } from './components/CategoryColumn';
 import { TransactionForm } from './components/TransactionForm';
-import { SemiCircularGauge } from './components/SemiCircularGauge';
+import { BudgetDonutCard } from './components/BudgetDonutCard';
 
 const cadenceToMonthlyFactor: Record<TransactionCadence, number> = {
   Weekly: 4,
@@ -624,34 +624,26 @@ export default function App() {
           </div>
           <div className="budget-dashboard-grid">
             {spendingPalette.slices.length > 0 && (
-              <section className="gauge-card" aria-label="Spending palette">
-                <div className="gauge-card-header">
-                  <h3>Spending Palette</h3>
-                  <p>Hover to flood the mural with a category</p>
-                </div>
-                <SemiCircularGauge
-                  data={spendingPalette.slices}
-                  total={spendingPalette.total}
-                  formatCurrency={formatCurrency}
-                  defaultLabel="Monthly Commitments"
-                  ariaLabel="Monthly commitments by category"
-                />
-              </section>
+              <BudgetDonutCard
+                title="Spending Palette"
+                subtitle="Hover to flood the mural with a category"
+                data={spendingPalette.slices}
+                total={spendingPalette.total}
+                formatCurrency={formatCurrency}
+                defaultLabel="Monthly Commitments"
+                ariaLabel="Monthly commitments by category"
+              />
             )}
             {budgetPulse.slices.length > 0 && (
-              <section className="gauge-card" aria-label="Budget pulse">
-                <div className="gauge-card-header">
-                  <h3>Budget Pulse</h3>
-                  <p>Track where every incoming dollar is headed</p>
-                </div>
-                <SemiCircularGauge
-                  data={budgetPulse.slices}
-                  total={budgetPulse.total}
-                  formatCurrency={formatCurrency}
-                  defaultLabel="Budget Allocation"
-                  ariaLabel="Budget allocation breakdown"
-                />
-              </section>
+              <BudgetDonutCard
+                title="Budget Pulse"
+                subtitle="Track where every incoming dollar is headed"
+                data={budgetPulse.slices}
+                total={budgetPulse.total}
+                formatCurrency={formatCurrency}
+                defaultLabel="Budget Allocation"
+                ariaLabel="Budget allocation breakdown"
+              />
             )}
           </div>
         </section>

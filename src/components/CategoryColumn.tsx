@@ -38,9 +38,15 @@ export function CategoryColumn({
     onDrop(category.id);
   };
 
+  const isNetInflow = monthlyTotal < 0;
+  const monthlyTotalDisplay = isNetInflow
+    ? `+${formatCurrency(Math.abs(monthlyTotal))}`
+    : formatCurrency(monthlyTotal);
+
   const renderTransaction = (transaction: Transaction) => {
     const amountClass = `transaction-amount ${transaction.flow.toLowerCase()}`;
-    const amountPrefix = transaction.flow === 'Expense' ? '-' : '+';
+    const isOutflow = transaction.flow !== 'Income';
+    const amountPrefix = isOutflow ? '-' : '+';
     const displayAmount = `${amountPrefix}${formatCurrency(transaction.amount)}`;
 
     const handleTransactionDragStart = (
@@ -74,9 +80,18 @@ export function CategoryColumn({
     );
   };
 
+  const sectionClassName = [
+    'category-card',
+    `category-${category.id}`,
+    isDropTarget ? 'drop-target' : '',
+    isNetInflow ? 'net-inflow' : ''
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
     <section
-      className={`category-card ${isDropTarget ? 'drop-target' : ''}`}
+      className={sectionClassName}
       style={{
         background: `linear-gradient(160deg, rgba(15,23,42,0.85), rgba(15,23,42,0.7)), linear-gradient(160deg, ${category.accent}, rgba(15, 23, 42, 0.95))`
       }}
@@ -84,7 +99,7 @@ export function CategoryColumn({
       <header className="category-header">
         <div>
           <div className="category-title">{category.name}</div>
-          <div className="category-total">{formatCurrency(monthlyTotal)} per month</div>
+          <div className="category-total">{monthlyTotalDisplay} per month</div>
         </div>
         <span className="category-chip" style={{ borderColor: category.accent, color: '#0f172a', background: '#f8fafc' }}>
           <span

@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import {
   CategoryKey,
   TransactionCadence,
@@ -29,10 +29,10 @@ interface TransactionFormProps {
 }
 
 export function TransactionForm({ categories, onAddTransaction }: TransactionFormProps) {
-  const initialCategory = useMemo(
-    () => categories[0]?.id ?? 'financial-obligations',
-    [categories]
-  );
+  const initialCategory = useMemo(() => {
+    const firstNonIncome = categories.find((category) => category.id !== 'income');
+    return firstNonIncome?.id ?? categories[0]?.id ?? 'financial-obligations';
+  }, [categories]);
 
   const [label, setLabel] = useState('');
   const [amount, setAmount] = useState('');
@@ -48,6 +48,17 @@ export function TransactionForm({ categories, onAddTransaction }: TransactionFor
     setFlow('Expense');
     setNote('');
   };
+
+  useEffect(() => {
+    setCategoryId((current) => {
+      const exists = categories.some((category) => category.id === current);
+      if (exists) {
+        return current;
+      }
+
+      return initialCategory;
+    });
+  }, [categories, initialCategory]);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

@@ -2,7 +2,7 @@ import { DragEvent as ReactDragEvent, useEffect, useMemo, useState } from 'react
 import { Category, CategoryKey, Transaction, TransactionCadence } from './types';
 import { CategoryColumn } from './components/CategoryColumn';
 import { TransactionForm } from './components/TransactionForm';
-import { CategoryPieChart } from './components/CategoryPieChart';
+import { SemiCircularGauge } from './components/SemiCircularGauge';
 
 const cadenceToMonthlyFactor: Record<TransactionCadence, number> = {
   Weekly: 4,
@@ -408,59 +408,95 @@ export default function App() {
 
   const netPrefix = summary.net >= 0 ? '+' : '-';
 
-  const commitmentsPie = useMemo(() => {
-    const slices = categories
-      .filter((category) => categoryMonthlyTotals[category.id] > 0)
-      .map((category) => ({
-        id: category.id,
-        name: category.name,
-        value: categoryMonthlyTotals[category.id],
-        accent: category.accent
-      }));
+  const spendingPalette = useMemo(() => {
+    const paletteOrder: Array<{
+      id: CategoryKey;
+      label: string;
+      accent: string;
+    }> = [
+      {
+        id: 'financial-obligations',
+        label: 'Financial Obligations',
+        accent: '#38bdf8'
+      },
+      {
+        id: 'lifestyle-recurring',
+        label: 'Lifestyle & Recurring',
+        accent: '#f472b6'
+      },
+      {
+        id: 'personal-family',
+        label: 'Personal & Family',
+        accent: '#facc15'
+      },
+      {
+        id: 'savings-investments',
+        label: 'Savings & Investments',
+        accent: '#22d3ee'
+      },
+      {
+        id: 'miscellaneous',
+        label: 'Miscellaneous',
+        accent: '#c084fc'
+      }
+    ];
+
+    const slices = paletteOrder
+      .map((entry) => ({
+        id: entry.id,
+        name: entry.label,
+        value: categoryMonthlyTotals[entry.id] ?? 0,
+        accent: entry.accent
+      }))
+      .filter((slice) => slice.value > 0);
 
     const total = slices.reduce((sum, slice) => sum + slice.value, 0);
 
     return { slices, total };
-  }, [categories, categoryMonthlyTotals]);
+  }, [categoryMonthlyTotals]);
 
-  const budgetPie = useMemo(() => {
-    const livingCosts = Math.max(summary.monthlyCommitments - summary.monthlySavings, 0);
-    const savings = Math.max(summary.monthlySavings, 0);
-    const income = Math.max(summary.monthlyIncome, 0);
-    const unassignedIncome = Math.max(income - summary.monthlyCommitments, 0);
-    const overBudget = Math.max(summary.monthlyCommitments - income, 0);
+  const budgetPulse = useMemo(() => {
+    const livingCategoryIds: CategoryKey[] = [
+      'financial-obligations',
+      'lifestyle-recurring',
+      'personal-family',
+      'miscellaneous'
+    ];
+
+    const livingCosts = livingCategoryIds.reduce(
+      (sum, categoryId) => sum + (categoryMonthlyTotals[categoryId] ?? 0),
+      0
+    );
+    const savings = categoryMonthlyTotals['savings-investments'] ?? 0;
+    const income = categoryMonthlyTotals.income ?? 0;
+    const commitmentsTotal = livingCosts + savings;
+    const overBudget = Math.max(commitmentsTotal - income, 0);
 
     const slices = [
       {
         id: 'living-costs',
-        name: 'Living costs',
+        name: 'Living Costs',
         value: livingCosts,
-        accent: '#38bdf8'
+        accent: '#2563eb'
       },
       {
         id: 'savings-investments',
-        name: 'Savings & investments',
+        name: 'Savings & Investments',
         value: savings,
         accent: '#22d3ee'
       },
       {
-        id: 'unassigned-income',
-        name: 'Income left to plan',
-        value: unassignedIncome,
-        accent: '#34d399'
-      },
-      {
         id: 'over-budget',
-        name: 'Over budget',
+        name: 'Over Budget',
         value: overBudget,
-        accent: '#f87171'
+        accent: '#fb7185'
       }
     ].filter((slice) => slice.value > 0);
 
     const total = slices.reduce((sum, slice) => sum + slice.value, 0);
 
     return { slices, total };
-  }, [summary.monthlyCommitments, summary.monthlyIncome, summary.monthlySavings]);
+  }, [categoryMonthlyTotals]);
 
   return (
     <div className="app-shell">
@@ -577,44 +613,44 @@ export default function App() {
         </div>
       </section>
 
-      {(commitmentsPie.slices.length > 0 || budgetPie.slices.length > 0) && (
-        <section className="insights" aria-labelledby="insights-heading">
-          <div className="insights-header">
-            <h2 id="insights-heading">Interactive insights</h2>
+      {(spendingPalette.slices.length > 0 || budgetPulse.slices.length > 0) && (
+        <section className="budget-dashboard" aria-labelledby="budget-dashboard-heading">
+          <div className="budget-dashboard-header">
+            <h2 id="budget-dashboard-heading">Interactive budget dashboard</h2>
             <p>
-              Explore how each category shapes your month and where your income is headed. Hover the
-              charts to see exact amounts and highlights.
+              Two quick reads that show how your commitments color the mural and where your income is
+              headed each month.
             </p>
           </div>
-          <div className="insights-grid">
-            {commitmentsPie.slices.length > 0 && (
-              <section className="chart-card" aria-label="Spending distribution">
-                <h3 className="chart-title">Spending palette</h3>
-                <p className="chart-subtitle">Hover to flood the mural with a category</p>
-                <div className="chart-wrapper">
-                  <CategoryPieChart
-                    data={commitmentsPie.slices}
-                    total={commitmentsPie.total}
-                    formatCurrency={formatCurrency}
-                    defaultLabel="Monthly commitments"
-                    ariaLabel="Monthly spending by category"
-                  />
+          <div className="budget-dashboard-grid">
+            {spendingPalette.slices.length > 0 && (
+              <section className="gauge-card" aria-label="Spending palette">
+                <div className="gauge-card-header">
+                  <h3>Spending Palette</h3>
+                  <p>Hover to flood the mural with a category</p>
                 </div>
+                <SemiCircularGauge
+                  data={spendingPalette.slices}
+                  total={spendingPalette.total}
+                  formatCurrency={formatCurrency}
+                  defaultLabel="Monthly Commitments"
+                  ariaLabel="Monthly commitments by category"
+                />
               </section>
             )}
-            {budgetPie.slices.length > 0 && (
-              <section className="chart-card" aria-label="Budget allocation">
-                <h3 className="chart-title">Budget pulse</h3>
-                <p className="chart-subtitle">Track where every incoming dollar is headed</p>
-                <div className="chart-wrapper">
-                  <CategoryPieChart
-                    data={budgetPie.slices}
-                    total={budgetPie.total}
-                    formatCurrency={formatCurrency}
-                    defaultLabel="Budget allocation"
-                    ariaLabel="Budget allocation overview"
-                  />
+            {budgetPulse.slices.length > 0 && (
+              <section className="gauge-card" aria-label="Budget pulse">
+                <div className="gauge-card-header">
+                  <h3>Budget Pulse</h3>
+                  <p>Track where every incoming dollar is headed</p>
                 </div>
+                <SemiCircularGauge
+                  data={budgetPulse.slices}
+                  total={budgetPulse.total}
+                  formatCurrency={formatCurrency}
+                  defaultLabel="Budget Allocation"
+                  ariaLabel="Budget allocation breakdown"
+                />
               </section>
             )}
           </div>

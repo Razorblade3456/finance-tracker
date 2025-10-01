@@ -9,6 +9,8 @@ interface CategoryPieChartProps {
   }>;
   total: number;
   formatCurrency: (value: number) => string;
+  defaultLabel?: string;
+  ariaLabel?: string;
 }
 
 const TWO_PI = Math.PI * 2;
@@ -48,7 +50,13 @@ function describeDonutSlice(
   ].join(' ');
 }
 
-export function CategoryPieChart({ data, total, formatCurrency }: CategoryPieChartProps) {
+export function CategoryPieChart({
+  data,
+  total,
+  formatCurrency,
+  defaultLabel = 'Total',
+  ariaLabel = 'Category breakdown'
+}: CategoryPieChartProps) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   const slices = useMemo(() => {
@@ -84,7 +92,7 @@ export function CategoryPieChart({ data, total, formatCurrency }: CategoryPieCha
   const activeSlice = slices.find((slice) => slice.id === hoveredId) ?? null;
 
   return (
-    <div className="pie-chart" role="img" aria-label="Spending by category">
+    <div className="pie-chart" role="img" aria-label={ariaLabel}>
       <svg viewBox="0 0 220 220" className="pie-chart-svg">
         <defs>
           <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
@@ -147,7 +155,7 @@ export function CategoryPieChart({ data, total, formatCurrency }: CategoryPieCha
           </text>
         )}
         <text x="110" y="124" textAnchor="middle" className="pie-label">
-          {activeSlice ? activeSlice.name : 'Monthly commitments'}
+          {activeSlice ? activeSlice.name : defaultLabel}
         </text>
       </svg>
       <ul className="pie-legend">

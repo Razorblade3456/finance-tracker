@@ -355,6 +355,44 @@ a {
   margin-top: 0.5rem;
 }
 
+.insights {
+  margin-top: clamp(2.5rem, 6vw, 4rem);
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+  background: linear-gradient(160deg, rgba(8, 47, 73, 0.12), rgba(15, 118, 110, 0.08));
+  border-radius: clamp(1.5rem, 4vw, 2.75rem);
+  border: 1.5px solid rgba(15, 23, 42, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1.5rem, 4vw, 2.5rem);
+}
+
+.insights-header {
+  max-width: 720px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.insights-header h2 {
+  margin: 0;
+  font-size: clamp(1.35rem, 3vw, 1.7rem);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.insights-header p {
+  margin: 0;
+  color: rgba(15, 23, 42, 0.72);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.insights-grid {
+  display: grid;
+  gap: clamp(1.25rem, 3vw, 2rem);
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
 .workspace {
   background: rgba(253, 252, 249, 0.95);
   border-radius: clamp(1.5rem, 4vw, 2.75rem);

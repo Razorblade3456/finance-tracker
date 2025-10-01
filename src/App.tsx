@@ -408,7 +408,7 @@ export default function App() {
 
   const netPrefix = summary.net >= 0 ? '+' : '-';
 
-  const pieData = useMemo(() => {
+  const commitmentsPie = useMemo(() => {
     const slices = categories
       .filter((category) => categoryMonthlyTotals[category.id] > 0)
       .map((category) => ({
@@ -422,6 +422,45 @@ export default function App() {
 
     return { slices, total };
   }, [categories, categoryMonthlyTotals]);
+
+  const budgetPie = useMemo(() => {
+    const livingCosts = Math.max(summary.monthlyCommitments - summary.monthlySavings, 0);
+    const savings = Math.max(summary.monthlySavings, 0);
+    const income = Math.max(summary.monthlyIncome, 0);
+    const unassignedIncome = Math.max(income - summary.monthlyCommitments, 0);
+    const overBudget = Math.max(summary.monthlyCommitments - income, 0);
+
+    const slices = [
+      {
+        id: 'living-costs',
+        name: 'Living costs',
+        value: livingCosts,
+        accent: '#38bdf8'
+      },
+      {
+        id: 'savings-investments',
+        name: 'Savings & investments',
+        value: savings,
+        accent: '#22d3ee'
+      },
+      {
+        id: 'unassigned-income',
+        name: 'Income left to plan',
+        value: unassignedIncome,
+        accent: '#34d399'
+      },
+      {
+        id: 'over-budget',
+        name: 'Over budget',
+        value: overBudget,
+        accent: '#f87171'
+      }
+    ].filter((slice) => slice.value > 0);
+
+    const total = slices.reduce((sum, slice) => sum + slice.value, 0);
+
+    return { slices, total };
+  }, [summary.monthlyCommitments, summary.monthlyIncome, summary.monthlySavings]);
 
   return (
     <div className="app-shell">
@@ -502,19 +541,6 @@ export default function App() {
                 </div>
               </section>
 
-              {pieData.slices.length > 0 ? (
-                <section className="chart-card mural-chart" aria-label="Spending distribution">
-                  <h2 className="chart-title">Spending palette</h2>
-                  <p className="chart-subtitle">Hover to flood the mural with a category</p>
-                  <div className="chart-wrapper">
-                    <CategoryPieChart
-                      data={pieData.slices}
-                      total={pieData.total}
-                      formatCurrency={formatCurrency}
-                    />
-                  </div>
-                </section>
-              ) : null}
             </div>
           </div>
         </div>
@@ -551,6 +577,50 @@ export default function App() {
           ))}
         </div>
       </section>
+
+      {(commitmentsPie.slices.length > 0 || budgetPie.slices.length > 0) && (
+        <section className="insights" aria-labelledby="insights-heading">
+          <div className="insights-header">
+            <h2 id="insights-heading">Interactive insights</h2>
+            <p>
+              Explore how each category shapes your month and where your income is headed. Hover the
+              charts to see exact amounts and highlights.
+            </p>
+          </div>
+          <div className="insights-grid">
+            {commitmentsPie.slices.length > 0 && (
+              <section className="chart-card" aria-label="Spending distribution">
+                <h3 className="chart-title">Spending palette</h3>
+                <p className="chart-subtitle">Hover to flood the mural with a category</p>
+                <div className="chart-wrapper">
+                  <CategoryPieChart
+                    data={commitmentsPie.slices}
+                    total={commitmentsPie.total}
+                    formatCurrency={formatCurrency}
+                    defaultLabel="Monthly commitments"
+                    ariaLabel="Monthly spending by category"
+                  />
+                </div>
+              </section>
+            )}
+            {budgetPie.slices.length > 0 && (
+              <section className="chart-card" aria-label="Budget allocation">
+                <h3 className="chart-title">Budget pulse</h3>
+                <p className="chart-subtitle">Track where every incoming dollar is headed</p>
+                <div className="chart-wrapper">
+                  <CategoryPieChart
+                    data={budgetPie.slices}
+                    total={budgetPie.total}
+                    formatCurrency={formatCurrency}
+                    defaultLabel="Budget allocation"
+                    ariaLabel="Budget allocation overview"
+                  />
+                </div>
+              </section>
+            )}
+          </div>
+        </section>
+      )}
 
       {dragState ? (
         <div

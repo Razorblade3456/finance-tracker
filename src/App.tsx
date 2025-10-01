@@ -487,17 +487,16 @@ export default function App() {
 
           <div className="mural-canvas">
             <div className="mural-art" aria-hidden="true">
-              <div className="art-panel art-panel--left" />
-              <div className="art-panel art-panel--center">
-                <span>وفا</span>
+              <div className="pastel-glow pastel-glow--top" />
+              <div className="pastel-glow pastel-glow--bottom" />
+              <div className="pastel-orb pastel-orb--left" />
+              <div className="pastel-orb pastel-orb--right" />
+              <div className="pastel-k-logo" aria-hidden="true">
+                <span className="pastel-lobe pastel-lobe--navy" />
+                <span className="pastel-lobe pastel-lobe--peach" />
+                <span className="pastel-lobe pastel-lobe--sky" />
+                <span className="pastel-lobe pastel-lobe--rose" />
               </div>
-              <div className="art-panel art-panel--right">
-                <div className="doorway">
-                  <div className="doorway-inner" />
-                </div>
-              </div>
-              <div className="art-stripes art-stripes--top" />
-              <div className="art-stripes art-stripes--bottom" />
             </div>
 
             <div className="mural-overlay">

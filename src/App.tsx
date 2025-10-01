@@ -28,6 +28,21 @@ const seededTransaction = (
 
 const initialCategories: Category[] = [
   {
+    id: 'income',
+    name: 'Income',
+    accent: '#34d399',
+    description: 'Your primary paycheck or recurring income stream to anchor the plan.',
+    transactions: [
+      seededTransaction({
+        label: 'Primary paycheck',
+        amount: 3200,
+        cadence: 'Monthly',
+        flow: 'Income',
+        note: 'Lands near the first of each month'
+      })
+    ]
+  },
+  {
     id: 'financial-obligations',
     name: 'Financial obligations',
     accent: '#38bdf8',
@@ -157,6 +172,7 @@ export default function App() {
 
   const categoryMonthlyTotals = useMemo(() => {
     const totals: Record<CategoryKey, number> = {
+      income: 0,
       'financial-obligations': 0,
       'lifestyle-recurring': 0,
       'personal-family': 0,

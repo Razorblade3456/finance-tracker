@@ -425,72 +425,131 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <header className="header">
-        <div className="header-title">
-          <span className="logo-badge">FL</span>
-          <h1>Flow Ledger</h1>
-        </div>
-        <p>
-          Keep your money map lightweight and beautiful today, with the structure ready to graduate
-          into a native app tomorrow.
-        </p>
-      </header>
+      <div className="mural-frame">
+        <header className="mural-header">
+          <span className="mural-brand">Walsh</span>
+          <nav className="mural-nav" aria-label="Primary">
+            <a href="#workspace">Work</a>
+            <a href="#summary">Info</a>
+            <a href="#contact">Contact</a>
+          </nav>
+          <button type="button" className="mural-peek" aria-label="Open navigation menu">
+            <span aria-hidden="true" />
+          </button>
+        </header>
 
-      <main className="dashboard">
-        <section className="summary-card">
-          <h2>At a glance</h2>
-          <div className="summary-grid">
-            <div className="stat">
-              <span className="stat-label">Monthly commitments</span>
-              <span className="stat-value">{formatCurrency(summary.monthlyCommitments)}</span>
+        <div className="mural-hero" id="summary">
+          <aside className="mural-side">
+            <span className="side-title">Flow Ledger</span>
+            <p className="side-tagline">
+              A personal finance wall made to feel as bold and expressive as the decisions behind it.
+            </p>
+          </aside>
+
+          <div className="mural-canvas">
+            <div className="mural-art" aria-hidden="true">
+              <div className="art-panel art-panel--left" />
+              <div className="art-panel art-panel--center">
+                <span>وفا</span>
+              </div>
+              <div className="art-panel art-panel--right">
+                <div className="doorway">
+                  <div className="doorway-inner" />
+                </div>
+              </div>
+              <div className="art-stripes art-stripes--top" />
+              <div className="art-stripes art-stripes--bottom" />
             </div>
-            <div className="stat">
-              <span className="stat-label">Savings cadence</span>
-              <span className="stat-value">{formatCurrency(summary.monthlySavings)}</span>
-              <span className="helper-text">Recurring investments you are prioritizing</span>
-            </div>
-            <div className="stat">
-              <span className="stat-label">Net monthly flow</span>
-              <span className="stat-value">
-                {netPrefix}
-                {formatCurrency(Math.abs(summary.net))}
-              </span>
-              <span className="helper-text">Income minus commitments</span>
-            </div>
-            <div className="stat">
-              <span className="stat-label">Tracked items</span>
-              <span className="stat-value">{summary.totalTransactions}</span>
-              <span className="helper-text">
-                Heaviest category: {summary.topCategory.name}{' '}
-                {summary.topCategory.total > 0
-                  ? `(${formatCurrency(summary.topCategory.total)}/mo)`
-                  : ''}
-              </span>
+
+            <div className="mural-overlay">
+              <section className="summary-card mural-summary" aria-labelledby="summary-heading">
+                <div className="summary-heading">
+                  <span className="logo-badge">FL</span>
+                  <div>
+                    <h2 id="summary-heading">Monthly mural</h2>
+                    <p className="summary-caption">Numbers behind the color</p>
+                  </div>
+                </div>
+                <div className="summary-grid">
+                  <div className="stat">
+                    <span className="stat-label">Commitments</span>
+                    <span className="stat-value">{formatCurrency(summary.monthlyCommitments)}</span>
+                    <span className="helper-text">Recurring bills + lifestyle picks</span>
+                  </div>
+                  <div className="stat">
+                    <span className="stat-label">Savings cadence</span>
+                    <span className="stat-value">{formatCurrency(summary.monthlySavings)}</span>
+                    <span className="helper-text">Intentional set-asides</span>
+                  </div>
+                  <div className="stat">
+                    <span className="stat-label">Net monthly flow</span>
+                    <span className="stat-value">
+                      {netPrefix}
+                      {formatCurrency(Math.abs(summary.net))}
+                    </span>
+                    <span className="helper-text">Income minus commitments</span>
+                  </div>
+                  <div className="stat">
+                    <span className="stat-label">Tracked items</span>
+                    <span className="stat-value">{summary.totalTransactions}</span>
+                    <span className="helper-text">
+                      {summary.topCategory.name}
+                      {summary.topCategory.total > 0
+                        ? ` (${formatCurrency(summary.topCategory.total)}/mo)`
+                        : ''}
+                    </span>
+                  </div>
+                </div>
+              </section>
+
+              {pieData.slices.length > 0 ? (
+                <section className="chart-card mural-chart" aria-label="Spending distribution">
+                  <h2 className="chart-title">Spending palette</h2>
+                  <p className="chart-subtitle">Hover to flood the mural with a category</p>
+                  <div className="chart-wrapper">
+                    <CategoryPieChart
+                      data={pieData.slices}
+                      total={pieData.total}
+                      formatCurrency={formatCurrency}
+                    />
+                  </div>
+                </section>
+              ) : null}
             </div>
           </div>
-        </section>
+        </div>
+      </div>
+
+      <section className="workspace" id="workspace">
+        <div className="workspace-header">
+          <h2>Transaction studio</h2>
+          <p>
+            Add, move, or clear items while the trash can watches in the wings. Every change feeds
+            directly into the mural above.
+          </p>
+        </div>
 
         <TransactionForm
           categories={categories.map(({ id, name }) => ({ id, name }))}
           onAddTransaction={handleAddTransaction}
         />
-      </main>
 
-      <section className="layout-columns">
-        {categories.map((category) => (
-          <CategoryColumn
-            key={category.id}
-            category={category}
-            monthlyTotal={categoryMonthlyTotals[category.id]}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
-            isDropTarget={dropCategoryId === category.id}
-            isDragging={Boolean(dragState)}
-            formatCurrency={formatCurrency}
-          />
-        ))}
+        <div className="layout-columns">
+          {categories.map((category) => (
+            <CategoryColumn
+              key={category.id}
+              category={category}
+              monthlyTotal={categoryMonthlyTotals[category.id]}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              isDropTarget={dropCategoryId === category.id}
+              isDragging={Boolean(dragState)}
+              formatCurrency={formatCurrency}
+            />
+          ))}
+        </div>
       </section>
 
       {dragState ? (
@@ -511,20 +570,12 @@ export default function App() {
         </div>
       ) : null}
 
-      {pieData.slices.length > 0 ? (
-        <section className="chart-card">
-          <h2 className="chart-title">Where your money goes</h2>
-          <p className="chart-subtitle">Hover a slice to spotlight a category</p>
-          <div className="chart-wrapper">
-            <CategoryPieChart data={pieData.slices} total={pieData.total} formatCurrency={formatCurrency} />
-          </div>
-        </section>
-      ) : null}
-
-      <p className="footer-note">
-        Flow Ledger is intentionally mobile-first and ready for the moment it becomes a dedicated
-        app – your data model and interactions will translate smoothly.
-      </p>
+      <footer className="mural-footer" id="contact">
+        <span className="footer-mark">Flow Ledger</span>
+        <span className="footer-note">
+          Built as a playful nod to Zooba&apos;s NoLiTa mural while keeping your budgeting tools intact.
+        </span>
+      </footer>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { DragEvent } from 'react';
+import { CSSProperties, DragEvent } from 'react';
 import { Category, CategoryKey, Transaction } from '../types';
 
 interface CategoryColumnProps {
@@ -89,28 +89,18 @@ export function CategoryColumn({
     .filter(Boolean)
     .join(' ');
 
+  const cardStyle: CSSProperties = { '--category-accent': category.accent } as CSSProperties;
+  const chipStyle: CSSProperties = { '--chip-accent': category.accent } as CSSProperties;
+
   return (
-    <section
-      className={sectionClassName}
-      style={{
-        background: `linear-gradient(160deg, rgba(15,23,42,0.85), rgba(15,23,42,0.7)), linear-gradient(160deg, ${category.accent}, rgba(15, 23, 42, 0.95))`
-      }}
-    >
+    <section className={sectionClassName} style={cardStyle}>
       <header className="category-header">
         <div>
           <div className="category-title">{category.name}</div>
           <div className="category-total">{monthlyTotalDisplay} per month</div>
         </div>
-        <span className="category-chip" style={{ borderColor: category.accent, color: '#0f172a', background: '#f8fafc' }}>
-          <span
-            style={{
-              display: 'inline-block',
-              width: '0.5rem',
-              height: '0.5rem',
-              borderRadius: '999px',
-              background: category.accent
-            }}
-          ></span>
+        <span className="category-chip" style={chipStyle}>
+          <span className="chip-dot" aria-hidden="true"></span>
           {category.transactions.length}
         </span>
       </header>

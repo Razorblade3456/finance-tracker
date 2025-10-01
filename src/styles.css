@@ -499,18 +499,20 @@ body.money-drag * {
 }
 
 .pie-slice {
-  transition: stroke-width 0.25s ease, transform 0.25s ease, filter 0.25s ease, opacity 0.25s ease;
-  opacity: 0.85;
+  transition: transform 0.25s ease, filter 0.25s ease, opacity 0.25s ease, stroke-width 0.25s ease;
+  opacity: 0.9;
+  transform-origin: center;
 }
 
 .pie-slice.active {
   opacity: 1;
+  stroke-width: 1.5;
 }
 
 .pie-center {
-  fill: rgba(248, 250, 252, 0.85);
+  fill: rgba(248, 250, 252, 0.92);
   stroke: rgba(148, 163, 184, 0.25);
-  stroke-width: 1;
+  stroke-width: 1.5;
 }
 
 .pie-value {

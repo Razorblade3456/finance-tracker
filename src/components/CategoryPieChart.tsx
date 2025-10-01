@@ -12,6 +12,11 @@ interface CategoryPieChartProps {
 }
 
 const TWO_PI = Math.PI * 2;
+const CENTER = 110;
+const BASE_OUTER_RADIUS = 94;
+const BASE_INNER_RADIUS = 64;
+const ACTIVE_GROWTH = 6;
+const ACTIVE_OFFSET = 10;
 
 function polarToCartesian(cx: number, cy: number, radius: number, angle: number) {
   return {
@@ -20,12 +25,27 @@ function polarToCartesian(cx: number, cy: number, radius: number, angle: number)
   };
 }
 
-function describeArc(cx: number, cy: number, radius: number, startAngle: number, endAngle: number) {
-  const start = polarToCartesian(cx, cy, radius, endAngle);
-  const end = polarToCartesian(cx, cy, radius, startAngle);
-  const largeArcFlag = endAngle - startAngle <= Math.PI ? '0' : '1';
+function describeDonutSlice(
+  cx: number,
+  cy: number,
+  innerRadius: number,
+  outerRadius: number,
+  startAngle: number,
+  endAngle: number
+) {
+  const outerStart = polarToCartesian(cx, cy, outerRadius, startAngle);
+  const outerEnd = polarToCartesian(cx, cy, outerRadius, endAngle);
+  const innerEnd = polarToCartesian(cx, cy, innerRadius, startAngle);
+  const innerStart = polarToCartesian(cx, cy, innerRadius, endAngle);
+  const largeArcFlag = endAngle - startAngle > Math.PI ? '1' : '0';
 
-  return [`M ${start.x} ${start.y}`, `A ${radius} ${radius} 0 ${largeArcFlag} 0 ${end.x} ${end.y}`].join(' ');
+  return [
+    `M ${outerStart.x} ${outerStart.y}`,
+    `A ${outerRadius} ${outerRadius} 0 ${largeArcFlag} 1 ${outerEnd.x} ${outerEnd.y}`,
+    `L ${innerStart.x} ${innerStart.y}`,
+    `A ${innerRadius} ${innerRadius} 0 ${largeArcFlag} 0 ${innerEnd.x} ${innerEnd.y}`,
+    'Z'
+  ].join(' ');
 }
 
 export function CategoryPieChart({ data, total, formatCurrency }: CategoryPieChartProps) {
@@ -78,10 +98,25 @@ export function CategoryPieChart({ data, total, formatCurrency }: CategoryPieCha
         {slices.map((slice) => {
           const isActive = hoveredId === slice.id;
           const midAngle = (slice.startAngle + slice.endAngle) / 2;
-          const offset = isActive ? 10 : 0;
-          const radius = isActive ? 94 : 88;
-          const { x: offsetX, y: offsetY } = polarToCartesian(110, 110, offset, midAngle);
-          const path = describeArc(110, 110, radius, slice.startAngle, slice.endAngle);
+          const offsetRadius = isActive ? ACTIVE_OFFSET : 0;
+          const outerRadius = isActive
+            ? BASE_OUTER_RADIUS + ACTIVE_GROWTH
+            : BASE_OUTER_RADIUS;
+          const innerRadius = BASE_INNER_RADIUS;
+          const { x: offsetX, y: offsetY } = polarToCartesian(
+            CENTER,
+            CENTER,
+            offsetRadius,
+            midAngle
+          );
+          const path = describeDonutSlice(
+            CENTER,
+            CENTER,
+            innerRadius,
+            outerRadius,
+            slice.startAngle,
+            slice.endAngle
+          );
 
           return (
             <g
@@ -92,17 +127,16 @@ export function CategoryPieChart({ data, total, formatCurrency }: CategoryPieCha
             >
               <path
                 d={path}
-                fill="none"
-                stroke={slice.accent}
-                strokeWidth={isActive ? 28 : 24}
-                strokeLinecap="round"
+                fill={slice.accent}
+                stroke="rgba(15, 23, 42, 0.12)"
+                strokeWidth={1}
                 className={`pie-slice ${isActive ? 'active' : ''}`}
                 style={{ filter: isActive ? 'url(#glow)' : 'none' }}
               />
             </g>
           );
         })}
-        <circle cx="110" cy="110" r="60" className="pie-center" />
+        <circle cx={CENTER} cy={CENTER} r={BASE_INNER_RADIUS - 4} className="pie-center" />
         {activeSlice ? (
           <text x="110" y="102" textAnchor="middle" className="pie-value">
             {formatCurrency(activeSlice.value)}

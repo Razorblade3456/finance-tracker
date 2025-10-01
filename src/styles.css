@@ -366,3 +366,68 @@ textarea {
   color: #64748b;
   padding-top: 2rem;
 }
+
+body.money-drag,
+body.money-drag * {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%2328c76f'/%3E%3Cstop offset='100%25' stop-color='%23038c7f'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='16' cy='16' r='15' fill='url(%23g)'/%3E%3Ctext x='16' y='21' font-size='18' text-anchor='middle' fill='%23f4fef8' font-family='Arial'%3E$%3C/text%3E%3C/svg%3E") 16 16,
+    grabbing !important;
+}
+
+.trash-dropzone {
+  position: fixed;
+  bottom: clamp(1.5rem, 3vw, 2.5rem);
+  left: 50%;
+  transform: translateX(-50%) scale(0.94);
+  transform-origin: center;
+  background: rgba(15, 23, 42, 0.9);
+  border-radius: 1.25rem;
+  padding: 0.85rem 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 220px;
+  color: #f8fafc;
+  border: 1px solid rgba(248, 250, 252, 0.12);
+  box-shadow: 0 24px 44px -28px rgba(15, 23, 42, 0.95);
+  z-index: 1000;
+  transition: transform 0.18s ease, border 0.18s ease, box-shadow 0.18s ease,
+    background 0.18s ease;
+  pointer-events: all;
+}
+
+.trash-dropzone strong {
+  font-size: 0.95rem;
+  color: #f8fafc;
+}
+
+.trash-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+  color: rgba(248, 250, 252, 0.7);
+}
+
+.trash-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.9rem;
+  background: rgba(248, 250, 252, 0.12);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  transition: transform 0.18s ease, background 0.18s ease;
+}
+
+.trash-dropzone.active {
+  transform: translateX(-50%) scale(1);
+  border-color: rgba(248, 113, 113, 0.7);
+  background: rgba(248, 113, 113, 0.2);
+  box-shadow: 0 28px 55px -28px rgba(248, 113, 113, 0.5);
+}
+
+.trash-dropzone.active .trash-icon {
+  background: rgba(248, 113, 113, 0.25);
+  transform: scale(1.08);
+}

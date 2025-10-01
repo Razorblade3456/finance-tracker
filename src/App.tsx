@@ -72,7 +72,7 @@ const initialCategories: Category[] = [
   },
   {
     id: 'lifestyle-recurring',
-    name: 'Lifestyle & recurring',
+    name: 'Recurring',
     accent: '#f472b6',
     description: 'Subscriptions and routines that make day-to-day life feel good.',
     transactions: [
@@ -92,7 +92,7 @@ const initialCategories: Category[] = [
   },
   {
     id: 'personal-family',
-    name: 'Personal & family',
+    name: 'Personal & Lifestyle',
     accent: '#facc15',
     description: 'The flexible spending for people, pets and shared experiences.',
     transactions: [

@@ -60,7 +60,8 @@ export function CategoryPieChart({
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   const slices = useMemo(() => {
-    if (!total) {
+    const computedTotal = data.reduce((sum, item) => sum + item.value, 0);
+    if (!computedTotal) {
       return [] as Array<{
         id: string;
         name: string;
@@ -74,19 +75,26 @@ export function CategoryPieChart({
 
     let currentAngle = -Math.PI / 2;
 
-    return data.map((item) => {
-      const sliceAngle = (item.value / total) * TWO_PI;
+    return data.map((item, index) => {
+      const ratio = item.value / computedTotal;
+      const sliceAngle = ratio * TWO_PI;
       const startAngle = currentAngle;
-      const endAngle = currentAngle + sliceAngle;
+      const endAngle =
+        index === data.length - 1 ? -Math.PI / 2 + TWO_PI : currentAngle + sliceAngle;
       currentAngle = endAngle;
 
       return {
         ...item,
         startAngle,
         endAngle,
-        percentage: (item.value / total) * 100
+        percentage: ratio * 100
       };
     });
+  }, [data]);
+
+  const totalValue = useMemo(() => {
+    const computedTotal = data.reduce((sum, item) => sum + item.value, 0);
+    return computedTotal || total;
   }, [data, total]);
 
   const activeSlice = slices.find((slice) => slice.id === hoveredId) ?? null;
@@ -136,8 +144,9 @@ export function CategoryPieChart({
               <path
                 d={path}
                 fill={slice.accent}
-                stroke="rgba(15, 23, 42, 0.12)"
-                strokeWidth={1}
+                stroke={isActive ? 'rgba(15, 23, 42, 0.12)' : 'none'}
+                strokeWidth={isActive ? 1 : 0}
+                strokeLinejoin="round"
                 className={`pie-slice ${isActive ? 'active' : ''}`}
                 style={{ filter: isActive ? 'url(#glow)' : 'none' }}
               />
@@ -151,7 +160,7 @@ export function CategoryPieChart({
           </text>
         ) : (
           <text x="110" y="102" textAnchor="middle" className="pie-value">
-            {formatCurrency(total)}
+            {formatCurrency(totalValue)}
           </text>
         )}
         <text x="110" y="124" textAnchor="middle" className="pie-label">

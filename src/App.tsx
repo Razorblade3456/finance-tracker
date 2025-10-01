@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
+import { DragEvent as ReactDragEvent, useEffect, useMemo, useState } from 'react';
 import { Category, CategoryKey, Transaction, TransactionCadence } from './types';
 import { CategoryColumn } from './components/CategoryColumn';
 import { TransactionForm } from './components/TransactionForm';
+import { CategoryPieChart } from './components/CategoryPieChart';
 
 const cadenceToMonthlyFactor: Record<TransactionCadence, number> = {
   Weekly: 4,
@@ -27,6 +28,21 @@ const seededTransaction = (
 });
 
 const initialCategories: Category[] = [
+  {
+    id: 'income',
+    name: 'Income',
+    accent: '#34d399',
+    description: 'Your primary paycheck or recurring income stream to anchor the plan.',
+    transactions: [
+      seededTransaction({
+        label: 'Primary paycheck',
+        amount: 3200,
+        cadence: 'Monthly',
+        flow: 'Income',
+        note: 'Lands near the first of each month'
+      })
+    ]
+  },
   {
     id: 'financial-obligations',
     name: 'Financial obligations',
@@ -138,6 +154,29 @@ export default function App() {
     fromCategoryId: CategoryKey;
   } | null>(null);
   const [dropCategoryId, setDropCategoryId] = useState<CategoryKey | null>(null);
+  const [isTrashHovered, setIsTrashHovered] = useState(false);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') {
+      return;
+    }
+
+    const targets: (Element | null)[] = [document.body, document.documentElement];
+
+    targets.forEach((element) => {
+      if (!element) return;
+
+      element.classList.toggle('money-drag', Boolean(dragState));
+    });
+
+    return () => {
+      targets.forEach((element) => {
+        if (!element) return;
+
+        element.classList.remove('money-drag');
+      });
+    };
+  }, [dragState]);
 
   const formatter = useMemo(
     () =>
@@ -157,6 +196,7 @@ export default function App() {
 
   const categoryMonthlyTotals = useMemo(() => {
     const totals: Record<CategoryKey, number> = {
+      income: 0,
       'financial-obligations': 0,
       'lifestyle-recurring': 0,
       'personal-family': 0,
@@ -258,6 +298,7 @@ export default function App() {
     if (fromCategory === toCategory) {
       setDropCategoryId(null);
       setDragState(null);
+      setIsTrashHovered(false);
       return;
     }
 
@@ -300,10 +341,12 @@ export default function App() {
 
     setDragState(null);
     setDropCategoryId(null);
+    setIsTrashHovered(false);
   };
 
   const handleDragStart = (originCategoryId: CategoryKey, transactionId: string) => {
     setDragState({ fromCategoryId: originCategoryId, transactionId });
+    setIsTrashHovered(false);
   };
 
   const handleDragOver = (targetCategoryId: CategoryKey) => {
@@ -316,14 +359,69 @@ export default function App() {
     }
 
     moveTransaction(dragState.fromCategoryId, targetCategoryId, dragState.transactionId);
+    setIsTrashHovered(false);
   };
 
   const handleDragEnd = () => {
     setDragState(null);
     setDropCategoryId(null);
+    setIsTrashHovered(false);
+  };
+
+  const deleteTransaction = (categoryId: CategoryKey, transactionId: string) => {
+    setCategories((current) =>
+      current.map((category) =>
+        category.id === categoryId
+          ? {
+              ...category,
+              transactions: category.transactions.filter((transaction) => transaction.id !== transactionId)
+            }
+          : category
+      )
+    );
+
+    setDragState(null);
+    setDropCategoryId(null);
+    setIsTrashHovered(false);
+  };
+
+  const handleTrashDragOver = (event: ReactDragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = 'move';
+    }
+    setIsTrashHovered(true);
+  };
+
+  const handleTrashDragLeave = () => {
+    setIsTrashHovered(false);
+  };
+
+  const handleTrashDrop = (event: ReactDragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    if (!dragState) {
+      return;
+    }
+
+    deleteTransaction(dragState.fromCategoryId, dragState.transactionId);
   };
 
   const netPrefix = summary.net >= 0 ? '+' : '-';
+
+  const pieData = useMemo(() => {
+    const slices = categories
+      .filter((category) => categoryMonthlyTotals[category.id] > 0)
+      .map((category) => ({
+        id: category.id,
+        name: category.name,
+        value: categoryMonthlyTotals[category.id],
+        accent: category.accent
+      }));
+
+    const total = slices.reduce((sum, slice) => sum + slice.value, 0);
+
+    return { slices, total };
+  }, [categories, categoryMonthlyTotals]);
 
   return (
     <div className="app-shell">
@@ -394,6 +492,34 @@ export default function App() {
           />
         ))}
       </section>
+
+      {dragState ? (
+        <div
+          className={`trash-dropzone ${isTrashHovered ? 'active' : ''}`}
+          onDragOver={handleTrashDragOver}
+          onDragEnter={handleTrashDragOver}
+          onDragLeave={handleTrashDragLeave}
+          onDrop={handleTrashDrop}
+        >
+          <div className="trash-icon" aria-hidden="true">
+            🗑️
+          </div>
+          <div className="trash-text">
+            <strong>Drop to delete</strong>
+            <span>Remove this transaction</span>
+          </div>
+        </div>
+      ) : null}
+
+      {pieData.slices.length > 0 ? (
+        <section className="chart-card">
+          <h2 className="chart-title">Where your money goes</h2>
+          <p className="chart-subtitle">Hover a slice to spotlight a category</p>
+          <div className="chart-wrapper">
+            <CategoryPieChart data={pieData.slices} total={pieData.total} formatCurrency={formatCurrency} />
+          </div>
+        </section>
+      ) : null}
 
       <p className="footer-note">
         Flow Ledger is intentionally mobile-first and ready for the moment it becomes a dedicated

@@ -31,7 +31,7 @@ const initialCategories: Category[] = [
   {
     id: 'income',
     name: 'Income',
-    accent: '#34d399',
+    accent: '#9ae6b4',
     description: 'Your primary paycheck or recurring income stream to anchor the plan.',
     transactions: [
       seededTransaction({
@@ -46,7 +46,7 @@ const initialCategories: Category[] = [
   {
     id: 'financial-obligations',
     name: 'Financial obligations',
-    accent: '#38bdf8',
+    accent: '#93c5fd',
     description: 'Mortgages, rent, insurance and the must-pay bills that keep life stable.',
     transactions: [
       seededTransaction({
@@ -74,7 +74,7 @@ const initialCategories: Category[] = [
   {
     id: 'lifestyle-recurring',
     name: 'Recurring',
-    accent: '#f472b6',
+    accent: '#fbcfe8',
     description: 'Subscriptions and routines that make day-to-day life feel good.',
     transactions: [
       seededTransaction({
@@ -94,7 +94,7 @@ const initialCategories: Category[] = [
   {
     id: 'personal-family',
     name: 'Personal & Lifestyle',
-    accent: '#facc15',
+    accent: '#fde68a',
     description: 'The flexible spending for people, pets and shared experiences.',
     transactions: [
       seededTransaction({
@@ -114,7 +114,7 @@ const initialCategories: Category[] = [
   {
     id: 'savings-investments',
     name: 'Savings & investments',
-    accent: '#22d3ee',
+    accent: '#a5f3fc',
     description: 'Long-term wins such as emergency funds, retirement and brokerage deposits.',
     transactions: [
       seededTransaction({
@@ -134,7 +134,7 @@ const initialCategories: Category[] = [
   {
     id: 'miscellaneous',
     name: 'Miscellaneous',
-    accent: '#c084fc',
+    accent: '#ddd6fe',
     description: 'Everything else — gifts, experiments, and the unexpected extras.',
     transactions: [
       seededTransaction({
@@ -147,7 +147,7 @@ const initialCategories: Category[] = [
   }
 ];
 
-const pinAccentPalette = ['#f472b6', '#22d3ee', '#34d399', '#facc15', '#c084fc'];
+const pinAccentPalette = ['#fbcfe8', '#bae6fd', '#bbf7d0', '#fde68a', '#ddd6fe'];
 
 export default function App() {
   const [categories, setCategories] = useState<Category[]>(initialCategories);
@@ -445,7 +445,7 @@ export default function App() {
         id: 'living-costs',
         name: 'Living costs & essentials',
         value: livingCosts,
-        accent: '#60a5fa'
+        accent: '#93c5fd'
       });
     }
 
@@ -454,7 +454,7 @@ export default function App() {
         id: 'savings',
         name: 'Savings & investments',
         value: savings,
-        accent: '#22d3ee'
+        accent: '#99f6e4'
       });
     }
 
@@ -463,7 +463,7 @@ export default function App() {
         id: 'available',
         name: 'Available to assign',
         value: available,
-        accent: '#34d399'
+        accent: '#bbf7d0'
       });
     }
 
@@ -472,7 +472,7 @@ export default function App() {
         id: 'over-budget',
         name: 'Over budget',
         value: overBudget,
-        accent: '#f472b6'
+        accent: '#fbcfe8'
       });
     }
 

@@ -99,7 +99,7 @@ export function CategoryColumn({
     <section
       className={`category-card ${isDropTarget ? 'drop-target' : ''}`}
       style={{
-        background: `linear-gradient(160deg, rgba(15,23,42,0.85), rgba(15,23,42,0.7)), linear-gradient(160deg, ${category.accent}, rgba(15, 23, 42, 0.95))`
+        background: `linear-gradient(160deg, ${category.accent}22, ${category.accent}36), linear-gradient(160deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.72))`
       }}
     >
       <header className="category-header">
@@ -107,7 +107,10 @@ export function CategoryColumn({
           <div className="category-title">{category.name}</div>
           <div className="category-total">{formatCurrency(monthlyTotal)} per month</div>
         </div>
-        <span className="category-chip" style={{ borderColor: category.accent, color: '#0f172a', background: '#f8fafc' }}>
+        <span
+          className="category-chip"
+          style={{ borderColor: `${category.accent}66`, background: 'rgba(255, 255, 255, 0.75)' }}
+        >
           <span
             style={{
               display: 'inline-block',

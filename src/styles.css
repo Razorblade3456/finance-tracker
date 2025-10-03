@@ -3,11 +3,21 @@
   color: #0f172a;
   min-height: 100%;
   color-scheme: light;
-  --page-bg: radial-gradient(circle at 20% -10%, #f8fbff 0%, #eef2ff 45%, #e2e8f0 100%);
-  --glass-surface: rgba(255, 255, 255, 0.78);
-  --glass-border: rgba(148, 163, 184, 0.22);
-  --glass-shadow: 0 25px 45px -30px rgba(15, 23, 42, 0.35);
-  --glass-shadow-strong: 0 35px 60px -38px rgba(15, 23, 42, 0.4);
+  --page-bg: linear-gradient(
+      165deg,
+      #ffe8ef 0%,
+      #ffd8cf 20%,
+      #f2e8ff 46%,
+      #e0f4ff 72%,
+      #c4f2ff 100%
+    );
+  --page-bloom: radial-gradient(circle at 18% -8%, rgba(255, 183, 197, 0.55), transparent 55%),
+    radial-gradient(circle at 82% 4%, rgba(171, 196, 255, 0.5), transparent 60%),
+    radial-gradient(circle at 50% 95%, rgba(134, 231, 255, 0.48), transparent 62%);
+  --glass-surface: rgba(255, 255, 255, 0.82);
+  --glass-border: rgba(148, 163, 184, 0.2);
+  --glass-shadow: 0 28px 48px -32px rgba(15, 23, 42, 0.32);
+  --glass-shadow-strong: 0 40px 70px -42px rgba(15, 23, 42, 0.38);
   --card-radius: 1.65rem;
   --transition-snappy: 0.28s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -20,6 +30,7 @@ body {
   margin: 0;
   min-height: 100vh;
   background: var(--page-bg);
+  background-attachment: fixed;
 }
 
 a {
@@ -46,8 +57,8 @@ a {
   content: '';
   position: fixed;
   inset: 0;
-  background: radial-gradient(circle at top right, rgba(59, 130, 246, 0.12), transparent 60%),
-    radial-gradient(circle at bottom left, rgba(14, 165, 233, 0.12), transparent 65%);
+  background: var(--page-bloom);
+  opacity: 0.75;
   pointer-events: none;
   z-index: -1;
 }
@@ -73,8 +84,8 @@ a {
   width: 2.5rem;
   height: 2.5rem;
   border-radius: 0.9rem;
-  background: linear-gradient(135deg, #2563eb, #38bdf8);
-  color: #fff;
+  background: linear-gradient(135deg, #fbc2eb, #a6c1ee);
+  color: #0f172a;
   font-weight: 700;
   font-size: 1.1rem;
 }
@@ -173,9 +184,9 @@ a {
 .stat {
   border-radius: 1rem;
   padding: 1.25rem 1.15rem;
-  background: rgba(255, 255, 255, 0.92);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.78));
   border: 1px solid rgba(148, 163, 184, 0.2);
-  box-shadow: 0 12px 28px -24px rgba(15, 23, 42, 0.45);
+  box-shadow: 0 18px 36px -30px rgba(148, 163, 184, 0.45);
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
@@ -249,14 +260,15 @@ a {
 }
 
 .yearly-card {
-  background: linear-gradient(135deg, rgba(15, 23, 42, 0.92), rgba(30, 58, 138, 0.85));
-  color: #f8fafc;
+  background: linear-gradient(140deg, rgba(255, 230, 239, 0.86), rgba(205, 231, 255, 0.92));
+  color: #0f172a;
   border-radius: calc(var(--card-radius) + 0.1rem);
   padding: clamp(1.5rem, 3vw, 2.5rem);
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
   box-shadow: var(--glass-shadow-strong);
+  border: 1px solid rgba(148, 163, 184, 0.25);
   transition: transform var(--transition-snappy), box-shadow var(--transition-snappy);
 }
 
@@ -268,7 +280,7 @@ a {
 .yearly-header p {
   margin: 0;
   font-size: 0.95rem;
-  color: rgba(248, 250, 252, 0.75);
+  color: rgba(71, 85, 105, 0.72);
   max-width: 34rem;
 }
 
@@ -279,43 +291,47 @@ a {
 }
 
 .yearly-stat {
-  background: rgba(248, 250, 252, 0.12);
+  background: rgba(255, 255, 255, 0.55);
   border-radius: 1rem;
   padding: 1rem;
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
   min-height: 120px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: 0 20px 40px -32px rgba(15, 23, 42, 0.25);
 }
 
 .yearly-label {
   font-size: 0.85rem;
-  color: rgba(248, 250, 252, 0.7);
+  color: rgba(71, 85, 105, 0.7);
 }
 
 .yearly-value {
   font-size: 1.35rem;
   font-weight: 600;
+  color: #0f172a;
 }
 
 .category-card {
-  background: rgba(15, 23, 42, 0.75);
-  color: #f8fafc;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.75), rgba(220, 232, 255, 0.72));
+  color: #0f172a;
   border-radius: 1.5rem;
   padding: 1.25rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
   min-height: 280px;
-  box-shadow: 0 15px 35px -30px rgba(15, 23, 42, 0.75);
-  border: 1px solid rgba(248, 250, 252, 0.08);
+  box-shadow: 0 26px 52px -34px rgba(148, 163, 184, 0.45);
+  border: 1px solid rgba(148, 163, 184, 0.22);
   transition: transform var(--transition-snappy), box-shadow var(--transition-snappy),
     border var(--transition-snappy);
+  backdrop-filter: blur(12px);
 }
 
 .category-card.drop-target {
-  border-color: rgba(56, 189, 248, 0.6);
-  box-shadow: 0 20px 45px -28px rgba(56, 189, 248, 0.55);
+  border-color: rgba(244, 182, 218, 0.65);
+  box-shadow: 0 24px 52px -32px rgba(244, 182, 218, 0.65);
 }
 
 .category-header {
@@ -332,12 +348,12 @@ a {
 
 .category-total {
   font-size: 0.9rem;
-  color: rgba(248, 250, 252, 0.7);
+  color: rgba(71, 85, 105, 0.68);
 }
 
 .category-description {
   font-size: 0.85rem;
-  color: rgba(248, 250, 252, 0.65);
+  color: rgba(71, 85, 105, 0.7);
   margin: 0;
 }
 
@@ -346,9 +362,9 @@ a {
   border-radius: 999px;
   font-size: 0.75rem;
   font-weight: 600;
-  border: 1px solid rgba(248, 250, 252, 0.4);
-  background: rgba(248, 250, 252, 0.15);
-  color: #f8fafc;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(255, 255, 255, 0.6);
+  color: #0f172a;
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
@@ -363,18 +379,19 @@ a {
 }
 
 .transaction-card {
-  background: rgba(15, 23, 42, 0.5);
+  background: rgba(255, 255, 255, 0.78);
   border-radius: 1rem;
   padding: 1rem 0.85rem 0.85rem;
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 0.5rem;
   align-items: center;
-  border: 1px solid rgba(148, 163, 184, 0.15);
+  border: 1px solid rgba(148, 163, 184, 0.25);
   cursor: grab;
   transition: transform var(--transition-snappy), border var(--transition-snappy),
     box-shadow var(--transition-snappy);
   position: relative;
+  box-shadow: 0 18px 36px -28px rgba(148, 163, 184, 0.35);
 }
 
 .transaction-card:active {
@@ -385,13 +402,13 @@ a {
 .transaction-card:hover,
 .transaction-card:focus-within {
   transform: translateY(-3px);
-  border-color: rgba(148, 163, 184, 0.4);
-  box-shadow: 0 18px 28px -24px rgba(15, 23, 42, 0.75);
+  border-color: rgba(244, 182, 218, 0.6);
+  box-shadow: 0 22px 36px -28px rgba(244, 182, 218, 0.6);
 }
 
 .transaction-card--pinned {
-  border-color: rgba(244, 114, 182, 0.7);
-  box-shadow: 0 0 0 1px rgba(244, 114, 182, 0.35);
+  border-color: rgba(244, 182, 218, 0.8);
+  box-shadow: 0 0 0 2px rgba(244, 182, 218, 0.45);
 }
 
 .transaction-pin {
@@ -401,8 +418,8 @@ a {
   border: none;
   border-radius: 999px;
   padding: 0.3rem 0.55rem;
-  background: rgba(15, 23, 42, 0.85);
-  color: rgba(248, 250, 252, 0.7);
+  background: rgba(255, 255, 255, 0.95);
+  color: #475569;
   font-size: 0.8rem;
   line-height: 1;
   display: inline-flex;
@@ -414,6 +431,7 @@ a {
   transition: opacity var(--transition-snappy), transform var(--transition-snappy),
     background var(--transition-snappy), color var(--transition-snappy);
   cursor: pointer;
+  box-shadow: 0 12px 24px -18px rgba(15, 23, 42, 0.2);
 }
 
 .transaction-card:hover .transaction-pin,
@@ -425,7 +443,7 @@ a {
 }
 
 .transaction-pin.is-pinned {
-  background: #facc15;
+  background: linear-gradient(135deg, #fbcfe8, #bae6fd);
   color: #0f172a;
   opacity: 1;
   visibility: visible;
@@ -448,7 +466,7 @@ a {
 
 .transaction-meta {
   font-size: 0.8rem;
-  color: rgba(248, 250, 252, 0.7);
+  color: rgba(71, 85, 105, 0.68);
 }
 
 .transaction-amount {
@@ -458,11 +476,11 @@ a {
 }
 
 .transaction-amount.expense {
-  color: #facc15;
+  color: #f9739b;
 }
 
 .transaction-amount.income {
-  color: #4ade80;
+  color: #34d399;
 }
 
 .transaction-amount.savings {
@@ -476,26 +494,28 @@ a {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(248, 250, 252, 0.55);
+  color: rgba(71, 85, 105, 0.65);
   font-size: 0.85rem;
+  background: rgba(255, 255, 255, 0.6);
 }
 
 .drop-zone.drag-over {
-  background: rgba(148, 163, 184, 0.12);
-  color: #f8fafc;
-  border-color: rgba(148, 163, 184, 0.6);
+  background: rgba(244, 182, 218, 0.2);
+  color: #0f172a;
+  border-color: rgba(244, 182, 218, 0.6);
 }
 
 .pinned-card {
-  background: linear-gradient(145deg, rgba(15, 23, 42, 0.82), rgba(30, 64, 175, 0.78));
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.78), rgba(214, 228, 255, 0.82));
   border-radius: var(--card-radius);
   padding: clamp(1.5rem, 3vw, 2.5rem);
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  border: 1px solid rgba(148, 163, 184, 0.25);
   display: flex;
   flex-direction: column;
   gap: clamp(1.25rem, 2vw, 1.75rem);
-  color: #f8fafc;
+  color: #0f172a;
   box-shadow: var(--glass-shadow-strong);
+  backdrop-filter: blur(14px);
   transition: transform var(--transition-snappy), box-shadow var(--transition-snappy);
 }
 
@@ -506,7 +526,7 @@ a {
 .pinned-header p {
   margin: 0;
   max-width: 36rem;
-  color: rgba(248, 250, 252, 0.7);
+  color: rgba(71, 85, 105, 0.72);
   font-size: 0.95rem;
 }
 
@@ -515,8 +535,10 @@ a {
   height: 16px;
   border-radius: 999px;
   overflow: hidden;
-  background: rgba(148, 163, 184, 0.25);
+  background: rgba(255, 255, 255, 0.6);
   position: relative;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.4);
 }
 
 .pinned-bar__segment {
@@ -526,7 +548,7 @@ a {
 }
 
 .pinned-bar__segment:not(:first-child) {
-  border-left: 1px solid rgba(15, 23, 42, 0.25);
+  border-left: 1px solid rgba(255, 255, 255, 0.7);
 }
 
 .pinned-bar__tooltip {
@@ -534,7 +556,7 @@ a {
   left: 50%;
   top: -2.75rem;
   transform: translateX(-50%);
-  background: rgba(15, 23, 42, 0.95);
+  background: rgba(15, 23, 42, 0.88);
   color: #f8fafc;
   padding: 0.45rem 0.75rem;
   border-radius: 0.75rem;
@@ -542,7 +564,7 @@ a {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
-  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.45);
+  box-shadow: 0 18px 32px -20px rgba(15, 23, 42, 0.5);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s ease, transform 0.2s ease;
@@ -560,10 +582,11 @@ a {
 .pinned-empty {
   padding: 1.5rem;
   border-radius: 1.25rem;
-  border: 1px dashed rgba(148, 163, 184, 0.3);
+  border: 1px dashed rgba(148, 163, 184, 0.35);
   text-align: center;
-  color: rgba(248, 250, 252, 0.7);
+  color: rgba(71, 85, 105, 0.7);
   font-size: 0.95rem;
+  background: rgba(255, 255, 255, 0.6);
 }
 
 .form-card {
@@ -629,8 +652,8 @@ input:focus,
 select:focus,
 textarea:focus {
   outline: none;
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 3px rgba(147, 197, 253, 0.25);
 }
 
 textarea {
@@ -642,8 +665,8 @@ textarea {
   border: none;
   border-radius: 999px;
   padding: 0.75rem 1.25rem;
-  background: linear-gradient(135deg, #2563eb, #38bdf8);
-  color: #fff;
+  background: linear-gradient(135deg, #fbc2eb, #a6c1ee);
+  color: #0f172a;
   font-weight: 600;
   font-size: 0.95rem;
   cursor: pointer;
@@ -652,7 +675,7 @@ textarea {
 
 .add-button:hover {
   transform: translateY(-1px);
-  box-shadow: 0 12px 25px -15px rgba(37, 99, 235, 0.8);
+  box-shadow: 0 16px 32px -18px rgba(244, 182, 218, 0.55);
 }
 
 .add-button:active {
@@ -662,7 +685,7 @@ textarea {
 .empty-state {
   text-align: center;
   font-size: 0.85rem;
-  color: rgba(248, 250, 252, 0.65);
+  color: rgba(71, 85, 105, 0.65);
 }
 
 .helper-text {
@@ -685,16 +708,16 @@ textarea {
   left: 50%;
   transform: translateX(-50%) scale(0.94);
   transform-origin: center;
-  background: rgba(15, 23, 42, 0.9);
+  background: rgba(255, 255, 255, 0.9);
   border-radius: 1.25rem;
   padding: 0.85rem 1.1rem;
   display: flex;
   align-items: center;
   gap: 0.75rem;
   min-width: 220px;
-  color: #f8fafc;
-  border: 1px solid rgba(248, 250, 252, 0.12);
-  box-shadow: 0 24px 44px -28px rgba(15, 23, 42, 0.95);
+  color: #0f172a;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  box-shadow: 0 24px 50px -30px rgba(148, 163, 184, 0.5);
   z-index: 1000;
   transition: transform 0.18s ease, border 0.18s ease, box-shadow 0.18s ease,
     background 0.18s ease;
@@ -703,7 +726,7 @@ textarea {
 
 .trash-dropzone strong {
   font-size: 0.95rem;
-  color: #f8fafc;
+  color: #0f172a;
 }
 
 .trash-text {
@@ -711,14 +734,14 @@ textarea {
   flex-direction: column;
   gap: 0.25rem;
   font-size: 0.85rem;
-  color: rgba(248, 250, 252, 0.7);
+  color: rgba(71, 85, 105, 0.72);
 }
 
 .trash-icon {
   width: 2.5rem;
   height: 2.5rem;
   border-radius: 0.9rem;
-  background: rgba(248, 250, 252, 0.12);
+  background: rgba(244, 182, 218, 0.25);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -728,13 +751,13 @@ textarea {
 
 .trash-dropzone.active {
   transform: translateX(-50%) scale(1);
-  border-color: rgba(248, 113, 113, 0.7);
-  background: rgba(248, 113, 113, 0.2);
-  box-shadow: 0 28px 55px -28px rgba(248, 113, 113, 0.5);
+  border-color: rgba(244, 182, 218, 0.7);
+  background: rgba(244, 182, 218, 0.25);
+  box-shadow: 0 28px 55px -28px rgba(244, 182, 218, 0.55);
 }
 
 .trash-dropzone.active .trash-icon {
-  background: rgba(248, 113, 113, 0.25);
+  background: rgba(255, 255, 255, 0.7);
   transform: scale(1.08);
 }
 
@@ -782,11 +805,11 @@ textarea {
 }
 
 .insight-card--spending {
-  background: linear-gradient(150deg, rgba(14, 165, 233, 0.16), rgba(255, 255, 255, 0.95));
+  background: linear-gradient(150deg, rgba(251, 191, 217, 0.28), rgba(255, 255, 255, 0.95));
 }
 
 .insight-card--allocation {
-  background: linear-gradient(150deg, rgba(165, 180, 252, 0.18), rgba(255, 255, 255, 0.94));
+  background: linear-gradient(150deg, rgba(186, 230, 253, 0.3), rgba(255, 255, 255, 0.94));
 }
 
 .insight-header {
@@ -1003,18 +1026,18 @@ textarea {
   .pinned-card:hover,
   .yearly-card:hover {
     transform: translateY(-6px);
-    box-shadow: 0 32px 55px -38px rgba(15, 23, 42, 0.45);
+    box-shadow: 0 32px 60px -38px rgba(244, 182, 218, 0.5);
   }
 
   .category-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 22px 45px -30px rgba(15, 23, 42, 0.75);
+    box-shadow: 0 28px 52px -32px rgba(148, 163, 184, 0.55);
   }
 
   .stat:hover,
   .insight-list-item:hover {
     transform: translateY(-2px);
-    box-shadow: 0 15px 32px -30px rgba(15, 23, 42, 0.45);
+    box-shadow: 0 18px 36px -30px rgba(244, 182, 218, 0.45);
   }
 
   .pinned-bar__segment:hover {

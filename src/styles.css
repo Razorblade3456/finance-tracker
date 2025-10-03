@@ -426,3 +426,202 @@ textarea {
   background: rgba(248, 113, 113, 0.25);
   transform: scale(1.08);
 }
+
+.insights-section {
+  margin-top: clamp(2rem, 5vw, 3rem);
+}
+
+.insights-card {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 1.75rem;
+  padding: clamp(1.5rem, 3vw, 2.5rem);
+  box-shadow: 0 25px 45px -30px rgba(15, 23, 42, 0.45);
+  display: grid;
+  gap: clamp(1.25rem, 2vw, 1.75rem);
+}
+
+.insights-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.insights-header h2 {
+  margin: 0;
+  font-size: clamp(1.25rem, 3vw, 1.6rem);
+}
+
+.insights-header p {
+  margin: 0;
+  color: #475569;
+  max-width: 32rem;
+}
+
+.bar-chart {
+  display: grid;
+  gap: clamp(1.25rem, 2vw, 1.75rem);
+}
+
+.bar-chart-visual {
+  display: flex;
+  align-items: flex-end;
+  gap: clamp(0.75rem, 2vw, 1.25rem);
+  height: clamp(220px, 40vw, 260px);
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(14, 165, 233, 0.05));
+  border-radius: 1.5rem;
+  padding: clamp(1rem, 3vw, 1.5rem);
+  border: 1px solid rgba(37, 99, 235, 0.12);
+  position: relative;
+}
+
+.bar-chart-visual::after {
+  content: '';
+  position: absolute;
+  inset: auto clamp(1rem, 3vw, 1.5rem) clamp(1rem, 3vw, 1.25rem);
+  height: 1px;
+  background: rgba(37, 99, 235, 0.15);
+}
+
+.bar-chart-column {
+  flex: 1;
+  min-width: 72px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.bar-chart-bar {
+  width: 100%;
+  height: 100%;
+  border: none;
+  border-radius: 1.25rem;
+  background: rgba(148, 163, 184, 0.16);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: clamp(0.4rem, 1vw, 0.6rem);
+  cursor: pointer;
+  transition: border 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.bar-chart-bar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.25), transparent 65%);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.bar-chart-bar:hover,
+.bar-chart-bar:focus-visible,
+.bar-chart-bar.active {
+  border: 1.5px solid rgba(37, 99, 235, 0.35);
+  box-shadow: 0 22px 40px -28px rgba(37, 99, 235, 0.35);
+  transform: translateY(-6px);
+}
+
+.bar-chart-bar:focus-visible {
+  outline: none;
+}
+
+.bar-chart-bar:hover::after,
+.bar-chart-bar:focus-visible::after,
+.bar-chart-bar.active::after {
+  opacity: 1;
+}
+
+.bar-chart-bar-fill {
+  width: 100%;
+  border-radius: 0.95rem;
+  transition: height 0.3s ease;
+  box-shadow: 0 14px 30px -20px rgba(15, 23, 42, 0.5);
+}
+
+.bar-chart-column-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+  color: #0f172a;
+}
+
+.bar-chart-summary {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.bar-chart-summary-label {
+  font-size: 0.85rem;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.bar-chart-summary-value {
+  font-size: clamp(1.8rem, 5vw, 2.4rem);
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.bar-chart-summary-helper {
+  font-size: 0.9rem;
+  color: #64748b;
+}
+
+.bar-chart-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.bar-chart-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(148, 163, 184, 0.14);
+  border-radius: 1rem;
+  padding: 0.75rem 1rem;
+  transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.bar-chart-legend-item.active {
+  background: rgba(37, 99, 235, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 16px 35px -30px rgba(37, 99, 235, 0.4);
+}
+
+.bar-chart-legend-swatch {
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 0.35rem;
+  flex-shrink: 0;
+}
+
+.bar-chart-legend-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.85rem;
+  color: #0f172a;
+}
+
+.bar-chart-legend-text strong {
+  font-size: 0.9rem;
+}
+
+.bar-chart-empty {
+  background: rgba(148, 163, 184, 0.15);
+  border-radius: 1.25rem;
+  padding: 1.5rem;
+  text-align: center;
+  font-size: 0.95rem;
+  color: #475569;
+}

@@ -562,35 +562,35 @@ export default function App() {
 
       <main className="dashboard">
         <section className="summary-card">
-            <div className="summary-header">
-              <h2>At a glance</h2>
-              <p>
-                Quick math on where your money sits each month. Pin tricky spending right from the
-                categories below when you want to keep an eye on it.
-              </p>
+          <div className="summary-header">
+            <h2>At a glance</h2>
+            <p>
+              A simple snapshot of this month’s plan. These numbers will stay in sync once Google
+              sign-in and the database arrive.
+            </p>
+          </div>
+          <div className="summary-grid">
+            <div className="stat">
+              <span className="stat-label">Money coming in</span>
+              <span className="stat-value">{formatCurrency(monthlyIncome)}</span>
+              <span className="stat-note">Average monthly income</span>
             </div>
-            <div className="summary-grid">
-              <div className="stat">
-                <span className="stat-label">Money coming in</span>
-                <span className="stat-value">{formatCurrency(monthlyIncome)}</span>
-                <span className="stat-note">Average monthly income</span>
-              </div>
-              <div className="stat">
-                <span className="stat-label">Money going out</span>
-                <span className="stat-value">{formatCurrency(monthlyCommitments)}</span>
-                <span className="stat-note">Bills, plans, and recurring costs</span>
-              </div>
-              <div className="stat">
-                <span className="stat-label">Set aside for savings</span>
-                <span className="stat-value">{formatCurrency(monthlySavings)}</span>
-                <span className="stat-note">What you’re tucking away every month</span>
-              </div>
-              <div className="stat">
-                <span className="stat-label">{netLabel}</span>
-                <span className="stat-value">{formatCurrency(net)}</span>
-                <span className="stat-note">{netNote}</span>
-              </div>
+            <div className="stat">
+              <span className="stat-label">Money going out</span>
+              <span className="stat-value">{formatCurrency(monthlyCommitments)}</span>
+              <span className="stat-note">Bills, plans, and recurring costs</span>
             </div>
+            <div className="stat">
+              <span className="stat-label">Set aside for savings</span>
+              <span className="stat-value">{formatCurrency(monthlySavings)}</span>
+              <span className="stat-note">What you’re tucking away every month</span>
+            </div>
+            <div className="stat">
+              <span className="stat-label">{netLabel}</span>
+              <span className="stat-value">{formatCurrency(net)}</span>
+              <span className="stat-note">{netNote}</span>
+            </div>
+          </div>
         </section>
 
         <TransactionForm
@@ -599,7 +599,13 @@ export default function App() {
         />
       </main>
 
-      <section className="insights-section">
+      <section className="section-block insights-section">
+        <div className="section-heading">
+          <div>
+            <h2>Insight spotlight</h2>
+            <p>Glance at the categories shaping your month and how income is working for you.</p>
+          </div>
+        </div>
         <div className="insights-grid">
           <article className="insight-card insight-card--spending">
             <div className="insight-header">
@@ -652,26 +658,37 @@ export default function App() {
         </div>
       </section>
 
-      <section className="layout-columns">
-        {categories.map((category) => (
-          <CategoryColumn
-            key={category.id}
-            category={category}
-            monthlyTotal={categoryMonthlyTotals[category.id]}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
-            isDropTarget={dropCategoryId === category.id}
-            isDragging={Boolean(dragState)}
-            formatCurrency={formatCurrency}
-            onTogglePin={togglePinnedTransaction}
-            pinnedTransactionIds={pinnedTransactionSet}
-          />
-        ))}
+      <section className="section-block categories-section">
+        <div className="section-heading">
+          <div>
+            <h2>Categories & transactions</h2>
+            <p>
+              Refine each spending lane, keep tabs on routine payments, and pin anything you want to
+              revisit later.
+            </p>
+          </div>
+        </div>
+        <div className="layout-columns">
+          {categories.map((category) => (
+            <CategoryColumn
+              key={category.id}
+              category={category}
+              monthlyTotal={categoryMonthlyTotals[category.id]}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              isDropTarget={dropCategoryId === category.id}
+              isDragging={Boolean(dragState)}
+              formatCurrency={formatCurrency}
+              onTogglePin={togglePinnedTransaction}
+              pinnedTransactionIds={pinnedTransactionSet}
+            />
+          ))}
+        </div>
       </section>
 
-      <section className="pinned-section">
+      <section className="section-block pinned-section">
         <div className="pinned-card">
           <div className="pinned-header">
             <h2>Pinned transactions</h2>
@@ -735,7 +752,7 @@ export default function App() {
         </div>
       </section>
 
-      <section className="yearly-section">
+      <section className="section-block yearly-section">
         <div className="yearly-card">
           <div className="yearly-header">
             <h2>Yearly breakdown</h2>
@@ -785,10 +802,10 @@ export default function App() {
         </div>
       ) : null}
 
-      <p className="footer-note">
+      <footer className="footer-note">
         Flow Ledger is intentionally mobile-first and ready for the moment it becomes a dedicated
         app – your data model and interactions will translate smoothly.
-      </p>
+      </footer>
     </div>
   );
 }

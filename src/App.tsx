@@ -1,8 +1,9 @@
-import { DragEvent as ReactDragEvent, useEffect, useMemo, useState } from 'react';
-import { Category, CategoryKey, Transaction, TransactionCadence } from './types';
+import { DragEvent as ReactDragEvent, useMemo, useState } from 'react';
+import { Category, CategoryKey, PinNote, Transaction, TransactionCadence } from './types';
 import { CategoryColumn } from './components/CategoryColumn';
 import { TransactionForm } from './components/TransactionForm';
 import { InsightList } from './components/InsightList';
+import { PinBoard } from './components/PinBoard';
 
 const cadenceToMonthlyFactor: Record<TransactionCadence, number> = {
   Weekly: 4,
@@ -147,6 +148,29 @@ const initialCategories: Category[] = [
   }
 ];
 
+const pinAccentPalette = ['#f472b6', '#22d3ee', '#34d399', '#facc15', '#c084fc'];
+
+const initialPinNotes: PinNote[] = [
+  {
+    id: 'pin-delivery',
+    label: 'Late-night delivery spending',
+    detail: 'Swap two orders for homemade dinners and pocket about $80 each month.',
+    accent: pinAccentPalette[0]
+  },
+  {
+    id: 'pin-coffee',
+    label: 'Daily coffee runs',
+    detail: 'Keep café stops to three times a week and transfer the savings on Fridays.',
+    accent: pinAccentPalette[1]
+  },
+  {
+    id: 'pin-vapes',
+    label: 'Vape + convenience store drops',
+    detail: 'Track each visit and cap it at $60 so the rest feeds your travel pot.',
+    accent: pinAccentPalette[2]
+  }
+];
+
 export default function App() {
   const [categories, setCategories] = useState<Category[]>(initialCategories);
   const [dragState, setDragState] = useState<{
@@ -155,6 +179,7 @@ export default function App() {
   } | null>(null);
   const [dropCategoryId, setDropCategoryId] = useState<CategoryKey | null>(null);
   const [isTrashHovered, setIsTrashHovered] = useState(false);
+  const [pins, setPins] = useState<PinNote[]>(initialPinNotes);
 
   const formatter = useMemo(
     () =>
@@ -270,6 +295,55 @@ export default function App() {
           : category
       )
     );
+  };
+
+  const handleAddPin = (label: string, detail: string) => {
+    setPins((current) => {
+      const accent = pinAccentPalette[current.length % pinAccentPalette.length];
+
+      return [
+        ...current,
+        {
+          id: generateId(),
+          label,
+          detail,
+          accent
+        }
+      ];
+    });
+  };
+
+  const handleReorderPins = (draggedId: string, targetId: string | null) => {
+    setPins((current) => {
+      const draggedIndex = current.findIndex((pin) => pin.id === draggedId);
+
+      if (draggedIndex === -1) {
+        return current;
+      }
+
+      const reordered = [...current];
+      const [draggedPin] = reordered.splice(draggedIndex, 1);
+
+      if (!targetId) {
+        reordered.push(draggedPin);
+        return reordered;
+      }
+
+      if (targetId === draggedId) {
+        reordered.splice(draggedIndex, 0, draggedPin);
+        return reordered;
+      }
+
+      const targetIndex = reordered.findIndex((pin) => pin.id === targetId);
+
+      if (targetIndex === -1) {
+        reordered.push(draggedPin);
+        return reordered;
+      }
+
+      reordered.splice(targetIndex, 0, draggedPin);
+      return reordered;
+    });
   };
 
   const moveTransaction = (fromCategory: CategoryKey, toCategory: CategoryKey, transactionId: string) => {
@@ -600,6 +674,10 @@ export default function App() {
             formatCurrency={formatCurrency}
           />
         ))}
+      </section>
+
+      <section className="pin-section">
+        <PinBoard pins={pins} onAddPin={handleAddPin} onReorder={handleReorderPins} />
       </section>
 
       <section className="yearly-section">

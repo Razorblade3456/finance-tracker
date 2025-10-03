@@ -2,7 +2,7 @@ import { DragEvent as ReactDragEvent, useEffect, useMemo, useState } from 'react
 import { Category, CategoryKey, Transaction, TransactionCadence } from './types';
 import { CategoryColumn } from './components/CategoryColumn';
 import { TransactionForm } from './components/TransactionForm';
-import { CategoryPieChart } from './components/CategoryPieChart';
+import { CategoryBarChart } from './components/CategoryBarChart';
 
 const cadenceToMonthlyFactor: Record<TransactionCadence, number> = {
   Weekly: 4,
@@ -155,14 +155,6 @@ export default function App() {
   } | null>(null);
   const [dropCategoryId, setDropCategoryId] = useState<CategoryKey | null>(null);
   const [isTrashHovered, setIsTrashHovered] = useState(false);
-
-  useEffect(() => {
-    if (typeof document === 'undefined') {
-      return;
-    }
-
-    };
-  }, [dragState]);
 
   const formatter = useMemo(
     () =>
@@ -394,7 +386,7 @@ export default function App() {
 
   const netPrefix = summary.net >= 0 ? '+' : '-';
 
-  const pieData = useMemo(() => {
+  const chartData = useMemo(() => {
     const slices = categories
       .filter((category) => categoryMonthlyTotals[category.id] > 0)
       .map((category) => ({
@@ -461,6 +453,23 @@ export default function App() {
           onAddTransaction={handleAddTransaction}
         />
       </main>
+
+      <section className="insights-section">
+        <div className="insights-card">
+          <div className="insights-header">
+            <h2>Interactive budget dashboard</h2>
+            <p>
+              Two quick reads that show how your commitments color the mural and where your income is
+              headed each month.
+            </p>
+          </div>
+          <CategoryBarChart
+            data={chartData.slices}
+            total={chartData.total}
+            formatCurrency={formatCurrency}
+          />
+        </div>
+      </section>
 
       <section className="layout-columns">
         {categories.map((category) => (

@@ -1,8 +1,9 @@
-import { DragEvent as ReactDragEvent, useMemo, useState } from 'react';
+import { DragEvent as ReactDragEvent, useCallback, useMemo, useState } from 'react';
 import { Category, CategoryKey, Transaction, TransactionCadence } from './types';
 import { CategoryColumn } from './components/CategoryColumn';
 import { TransactionForm } from './components/TransactionForm';
 import { InsightList } from './components/InsightList';
+import { DownloadButton } from './components/DownloadButton';
 
 const cadenceToMonthlyFactor: Record<TransactionCadence, number> = {
   Weekly: 4,
@@ -192,10 +193,30 @@ export default function App() {
     []
   );
 
-  const formatCurrency = (value: number) => {
-    const sign = value < 0 ? '-' : '';
-    return `${sign}${formatter.format(Math.abs(value))}`;
-  };
+  const formatCurrency = useCallback(
+    (value: number) => {
+      const sign = value < 0 ? '-' : '';
+      return `${sign}${formatter.format(Math.abs(value))}`;
+    },
+    [formatter]
+  );
+
+  const formatDate = useCallback((value: string) => {
+    if (!value) {
+      return '';
+    }
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return value;
+    }
+
+    return parsed.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  }, []);
 
   const pinnedTransactionSet = useMemo(
     () => new Set(pinnedTransactionIds),
@@ -575,6 +596,152 @@ export default function App() {
   const primaryCategories = categories.slice(0, midpoint);
   const secondaryCategories = categories.slice(midpoint);
 
+  type ExportTarget = 'monthly' | 'yearly' | 'categories' | 'insights' | 'pinned';
+
+  const downloadCsv = useCallback((fileName: string, headers: string[], rows: (string | number)[][]) => {
+    if (!rows.length) {
+      return;
+    }
+
+    const escapeCell = (cell: string | number) => {
+      const stringified = String(cell ?? '');
+      if (stringified.includes('"')) {
+        return `"${stringified.replace(/"/g, '""')}"`;
+      }
+
+      if (stringified.includes(',') || stringified.includes('\n')) {
+        return `"${stringified}"`;
+      }
+
+      return stringified;
+    };
+
+    const csvContent = [headers, ...rows]
+      .map((row) => row.map(escapeCell).join(','))
+      .join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', fileName);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, []);
+
+  const handleDownload = useCallback(
+    (target: ExportTarget) => {
+      if (target === 'monthly') {
+        const headers = ['Metric', 'Amount', 'Notes'];
+        const rows: (string | number)[][] = [
+          ['Money coming in', formatCurrency(monthlyIncome), 'Average monthly income'],
+          ['Money going out', formatCurrency(monthlyCommitments), 'Bills, plans, and recurring costs'],
+          ['Set aside for savings', formatCurrency(monthlySavings), 'What you’re tucking away every month'],
+          [netLabel, formatCurrency(net), netNote]
+        ];
+
+        downloadCsv(
+          `monthly-summary-${selectedYear}-${String(Number(selectedMonth) + 1).padStart(2, '0')}.csv`,
+          headers,
+          rows
+        );
+        return;
+      }
+
+      if (target === 'yearly') {
+        const headers = ['Metric', 'Amount'];
+        const rows: (string | number)[][] = [
+          ['Yearly income', formatCurrency(yearlyOutlook.income)],
+          ['Yearly bills & plans', formatCurrency(yearlyOutlook.commitments)],
+          ['Saved across the year', formatCurrency(yearlyOutlook.savings)],
+          [yearlyOutlook.net >= 0 ? 'Estimated cushion' : 'Projected shortfall', formatCurrency(yearlyOutlook.net)]
+        ];
+
+        downloadCsv(`yearly-breakdown-${selectedYear}.csv`, headers, rows);
+        return;
+      }
+
+      if (target === 'categories') {
+        const headers = [
+          'Category',
+          'Transaction',
+          'Flow',
+          'Cadence',
+          'Original amount',
+          'Monthly equivalent',
+          'Date',
+          'Notes'
+        ];
+
+        const rows: (string | number)[][] = categories.flatMap((category) =>
+          category.transactions.map((transaction) => {
+            const monthlyEquivalent =
+              transaction.amount * cadenceToMonthlyFactor[transaction.cadence];
+
+            return [
+              category.name,
+              transaction.label,
+              transaction.flow,
+              transaction.cadence,
+              formatCurrency(transaction.amount),
+              formatCurrency(monthlyEquivalent),
+              formatDate(transaction.date),
+              transaction.note || ''
+            ];
+          })
+        );
+
+        downloadCsv('categories-transactions.csv', headers, rows);
+        return;
+      }
+
+      if (target === 'insights') {
+        const headers = ['Insight group', 'Label', 'Amount'];
+        const rows: (string | number)[][] = [
+          ...insights.spending.bars.map((bar) => ['Spending commitments', bar.name, formatCurrency(bar.value)]),
+          ...insights.allocation.bars.map((bar) => ['Budget allocation', bar.name, formatCurrency(bar.value)])
+        ];
+
+        downloadCsv('insights-overview.csv', headers, rows);
+        return;
+      }
+
+      if (target === 'pinned') {
+        const headers = ['Pinned item', 'Category', 'Monthly value'];
+        const rows: (string | number)[][] = pinnedSummary.items.map((item) => [
+          item.name,
+          item.categoryName,
+          formatCurrency(item.value)
+        ]);
+
+        downloadCsv('pinned-transactions.csv', headers, rows);
+      }
+    },
+    [
+      categories,
+      downloadCsv,
+      formatCurrency,
+      formatDate,
+      insights.allocation.bars,
+      insights.spending.bars,
+      monthlyCommitments,
+      monthlyIncome,
+      monthlySavings,
+      net,
+      netLabel,
+      netNote,
+      pinnedSummary.items,
+      selectedMonth,
+      selectedYear,
+      yearlyOutlook.commitments,
+      yearlyOutlook.income,
+      yearlyOutlook.net,
+      yearlyOutlook.savings
+    ]
+  );
+
   return (
     <div className="app-shell">
       <header className="header">
@@ -615,6 +782,11 @@ export default function App() {
                 </select>
               </label>
               <span className="summary-pill">{monthLabel} {selectedYear}</span>
+              <DownloadButton
+                label="Download month (.csv)"
+                onClick={() => handleDownload('monthly')}
+                aria-label={`Download ${monthLabel} ${selectedYear} summary`}
+              />
             </div>
           </div>
           <div className="summary-grid">
@@ -652,6 +824,14 @@ export default function App() {
           <div>
             <h2>Insight spotlight</h2>
             <p>Glance at the categories shaping your month and how income is working for you.</p>
+          </div>
+          <div className="section-heading__actions">
+            <DownloadButton
+              label="Download insights"
+              onClick={() => handleDownload('insights')}
+              disabled={!insights.spending.bars.length && !insights.allocation.bars.length}
+              aria-label="Download insight spotlight data"
+            />
           </div>
         </div>
         <div className="insights-grid">
@@ -715,6 +895,14 @@ export default function App() {
               revisit later.
             </p>
           </div>
+          <div className="section-heading__actions">
+            <DownloadButton
+              label="Download transactions"
+              onClick={() => handleDownload('categories')}
+              disabled={!categories.some((category) => category.transactions.length)}
+              aria-label="Download all category transactions"
+            />
+          </div>
         </div>
         <div className="category-layout">
           <div className="category-layout__row category-layout__row--primary">
@@ -761,11 +949,19 @@ export default function App() {
       <section className="section-block pinned-section">
         <div className="pinned-card">
           <div className="pinned-header">
-            <h2>Pinned transactions</h2>
-            <p>
-              Hover a transaction above and tap the pin to watch it here. We’ll keep these synced
-              once sign-in and the database ship.
-            </p>
+            <div className="pinned-header__intro">
+              <h2>Pinned transactions</h2>
+              <p>
+                Hover a transaction above and tap the pin to watch it here. We’ll keep these synced
+                once sign-in and the database ship.
+              </p>
+            </div>
+            <DownloadButton
+              label="Download pinned"
+              onClick={() => handleDownload('pinned')}
+              disabled={!pinnedSummary.items.length}
+              aria-label="Download pinned transactions"
+            />
           </div>
 
           {pinnedSummary.items.length ? (
@@ -847,6 +1043,11 @@ export default function App() {
                 ))}
               </select>
             </label>
+            <DownloadButton
+              label="Download year (.csv)"
+              onClick={() => handleDownload('yearly')}
+              aria-label={`Download yearly breakdown for ${selectedYear}`}
+            />
           </div>
           <div className="yearly-grid">
             <div className="yearly-stat">

@@ -547,6 +547,10 @@ export default function App() {
     return { items, total };
   }, [categories, pinnedTransactionIds]);
 
+  const midpoint = Math.ceil(categories.length / 2);
+  const primaryCategories = categories.slice(0, midpoint);
+  const secondaryCategories = categories.slice(midpoint);
+
   return (
     <div className="app-shell">
       <header className="header">
@@ -668,23 +672,45 @@ export default function App() {
             </p>
           </div>
         </div>
-        <div className="layout-columns">
-          {categories.map((category) => (
-            <CategoryColumn
-              key={category.id}
-              category={category}
-              monthlyTotal={categoryMonthlyTotals[category.id]}
-              onDragStart={handleDragStart}
-              onDragEnd={handleDragEnd}
-              onDrop={handleDrop}
-              onDragOver={handleDragOver}
-              isDropTarget={dropCategoryId === category.id}
-              isDragging={Boolean(dragState)}
-              formatCurrency={formatCurrency}
-              onTogglePin={togglePinnedTransaction}
-              pinnedTransactionIds={pinnedTransactionSet}
-            />
-          ))}
+        <div className="category-layout">
+          <div className="category-layout__row category-layout__row--primary">
+            {primaryCategories.map((category) => (
+              <CategoryColumn
+                key={category.id}
+                category={category}
+                monthlyTotal={categoryMonthlyTotals[category.id]}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                isDropTarget={dropCategoryId === category.id}
+                isDragging={Boolean(dragState)}
+                formatCurrency={formatCurrency}
+                onTogglePin={togglePinnedTransaction}
+                pinnedTransactionIds={pinnedTransactionSet}
+              />
+            ))}
+          </div>
+          {secondaryCategories.length ? (
+            <div className="category-layout__row category-layout__row--secondary">
+              {secondaryCategories.map((category) => (
+                <CategoryColumn
+                  key={category.id}
+                  category={category}
+                  monthlyTotal={categoryMonthlyTotals[category.id]}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
+                  onDrop={handleDrop}
+                  onDragOver={handleDragOver}
+                  isDropTarget={dropCategoryId === category.id}
+                  isDragging={Boolean(dragState)}
+                  formatCurrency={formatCurrency}
+                  onTogglePin={togglePinnedTransaction}
+                  pinnedTransactionIds={pinnedTransactionSet}
+                />
+              ))}
+            </div>
+          ) : null}
         </div>
       </section>
 

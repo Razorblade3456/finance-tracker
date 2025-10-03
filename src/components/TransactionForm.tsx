@@ -25,6 +25,7 @@ interface TransactionFormProps {
     cadence: TransactionCadence;
     flow: TransactionFlow;
     note: string;
+    date: string;
   }) => void;
 }
 
@@ -40,6 +41,7 @@ export function TransactionForm({ categories, onAddTransaction }: TransactionFor
   const [cadence, setCadence] = useState<TransactionCadence>('Monthly');
   const [flow, setFlow] = useState<TransactionFlow>('Expense');
   const [note, setNote] = useState('');
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
 
   const resetForm = () => {
     setLabel('');
@@ -47,6 +49,7 @@ export function TransactionForm({ categories, onAddTransaction }: TransactionFor
     setCadence('Monthly');
     setFlow('Expense');
     setNote('');
+    setDate(new Date().toISOString().slice(0, 10));
   };
 
   useEffect(() => {
@@ -74,7 +77,8 @@ export function TransactionForm({ categories, onAddTransaction }: TransactionFor
       amount: parsedAmount,
       cadence,
       flow,
-      note: note.trim()
+      note: note.trim(),
+      date
     });
 
     resetForm();
@@ -85,8 +89,8 @@ export function TransactionForm({ categories, onAddTransaction }: TransactionFor
       <div>
         <h2>Log a transaction</h2>
         <p className="helper-text">
-          Keep tabs on cashflow you can eventually sync to mobile – add an item and drag it to
-          another category as life shifts.
+          Keep tabs on cashflow you can eventually sync to mobile – add the details, set the date,
+          and drag it to another category as life shifts.
         </p>
       </div>
 
@@ -114,6 +118,18 @@ export function TransactionForm({ categories, onAddTransaction }: TransactionFor
             placeholder="0.00"
             value={amount}
             onChange={(event) => setAmount(event.target.value)}
+            required
+          />
+        </div>
+
+        <div className="field">
+          <label htmlFor="transaction-date">Date</label>
+          <input
+            id="transaction-date"
+            name="transaction-date"
+            type="date"
+            value={date}
+            onChange={(event) => setDate(event.target.value)}
             required
           />
         </div>

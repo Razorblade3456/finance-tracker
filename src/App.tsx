@@ -1,8 +1,8 @@
-import { DragEvent as ReactDragEvent, useEffect, useMemo, useState } from 'react';
+import { DragEvent as ReactDragEvent, useMemo, useState } from 'react';
 import { Category, CategoryKey, Transaction, TransactionCadence } from './types';
 import { CategoryColumn } from './components/CategoryColumn';
 import { TransactionForm } from './components/TransactionForm';
-import { CategoryPieChart } from './components/CategoryPieChart';
+import { InsightList } from './components/InsightList';
 
 const cadenceToMonthlyFactor: Record<TransactionCadence, number> = {
   Weekly: 4,
@@ -23,6 +23,7 @@ const seededTransaction = (
 ): Transaction => ({
   id: generateId(),
   note: '',
+  date: new Date().toISOString().slice(0, 10),
   createdAt: new Date().toISOString(),
   ...overrides
 });
@@ -31,7 +32,7 @@ const initialCategories: Category[] = [
   {
     id: 'income',
     name: 'Income',
-    accent: '#34d399',
+    accent: '#9ae6b4',
     description: 'Your primary paycheck or recurring income stream to anchor the plan.',
     transactions: [
       seededTransaction({
@@ -46,7 +47,7 @@ const initialCategories: Category[] = [
   {
     id: 'financial-obligations',
     name: 'Financial obligations',
-    accent: '#38bdf8',
+    accent: '#93c5fd',
     description: 'Mortgages, rent, insurance and the must-pay bills that keep life stable.',
     transactions: [
       seededTransaction({
@@ -74,7 +75,7 @@ const initialCategories: Category[] = [
   {
     id: 'lifestyle-recurring',
     name: 'Recurring',
-    accent: '#f472b6',
+    accent: '#fbcfe8',
     description: 'Subscriptions and routines that make day-to-day life feel good.',
     transactions: [
       seededTransaction({
@@ -94,7 +95,7 @@ const initialCategories: Category[] = [
   {
     id: 'personal-family',
     name: 'Personal & Lifestyle',
-    accent: '#facc15',
+    accent: '#fde68a',
     description: 'The flexible spending for people, pets and shared experiences.',
     transactions: [
       seededTransaction({
@@ -114,7 +115,7 @@ const initialCategories: Category[] = [
   {
     id: 'savings-investments',
     name: 'Savings & investments',
-    accent: '#22d3ee',
+    accent: '#a5f3fc',
     description: 'Long-term wins such as emergency funds, retirement and brokerage deposits.',
     transactions: [
       seededTransaction({
@@ -134,7 +135,7 @@ const initialCategories: Category[] = [
   {
     id: 'miscellaneous',
     name: 'Miscellaneous',
-    accent: '#c084fc',
+    accent: '#ddd6fe',
     description: 'Everything else — gifts, experiments, and the unexpected extras.',
     transactions: [
       seededTransaction({
@@ -147,6 +148,8 @@ const initialCategories: Category[] = [
   }
 ];
 
+const pinAccentPalette = ['#fbcfe8', '#bae6fd', '#bbf7d0', '#fde68a', '#ddd6fe'];
+
 export default function App() {
   const [categories, setCategories] = useState<Category[]>(initialCategories);
   const [dragState, setDragState] = useState<{
@@ -155,14 +158,28 @@ export default function App() {
   } | null>(null);
   const [dropCategoryId, setDropCategoryId] = useState<CategoryKey | null>(null);
   const [isTrashHovered, setIsTrashHovered] = useState(false);
-
-  useEffect(() => {
-    if (typeof document === 'undefined') {
-      return;
-    }
-
-    };
-  }, [dragState]);
+  const [pinnedTransactionIds, setPinnedTransactionIds] = useState<string[]>([]);
+  const monthOptions = useMemo(
+    () =>
+      Array.from({ length: 12 }, (_, index) => {
+        const date = new Date(2000, index, 1);
+        return {
+          value: String(index),
+          label: date.toLocaleString('en-US', { month: 'long' })
+        };
+      }),
+    []
+  );
+  const [selectedMonth, setSelectedMonth] = useState(() => String(new Date().getMonth()));
+  const monthLabel = useMemo(() => {
+    const match = monthOptions.find((option) => option.value === selectedMonth);
+    return match?.label ?? 'January';
+  }, [monthOptions, selectedMonth]);
+  const yearOptions = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    return Array.from({ length: 5 }, (_, index) => String(currentYear - 2 + index));
+  }, []);
+  const [selectedYear, setSelectedYear] = useState(() => String(new Date().getFullYear()));
 
   const formatter = useMemo(
     () =>
@@ -179,6 +196,11 @@ export default function App() {
     const sign = value < 0 ? '-' : '';
     return `${sign}${formatter.format(Math.abs(value))}`;
   };
+
+  const pinnedTransactionSet = useMemo(
+    () => new Set(pinnedTransactionIds),
+    [pinnedTransactionIds]
+  );
 
   const categoryMonthlyTotals = useMemo(() => {
     const totals: Record<CategoryKey, number> = {
@@ -257,6 +279,7 @@ export default function App() {
     cadence: TransactionCadence;
     flow: Transaction['flow'];
     note: string;
+    date: string;
   }) => {
     const newTransaction: Transaction = {
       id: generateId(),
@@ -265,6 +288,7 @@ export default function App() {
       cadence: payload.cadence,
       flow: payload.flow,
       note: payload.note,
+      date: payload.date,
       createdAt: new Date().toISOString()
     };
 
@@ -277,6 +301,14 @@ export default function App() {
             }
           : category
       )
+    );
+  };
+
+  const togglePinnedTransaction = (transactionId: string) => {
+    setPinnedTransactionIds((current) =>
+      current.includes(transactionId)
+        ? current.filter((id) => id !== transactionId)
+        : [...current, transactionId]
     );
   };
 
@@ -392,22 +424,156 @@ export default function App() {
     deleteTransaction(dragState.fromCategoryId, dragState.transactionId);
   };
 
-  const netPrefix = summary.net >= 0 ? '+' : '-';
+  const { monthlyCommitments, monthlySavings, monthlyIncome, net } = summary;
+  const hasMonthlyLeftover = net >= 0;
+  const netLabel = hasMonthlyLeftover ? 'Left after bills' : 'Short this month';
+  const netNote = hasMonthlyLeftover
+    ? 'Use this for goals or flexible spending'
+    : 'Plan to cover this gap soon';
 
-  const pieData = useMemo(() => {
-    const slices = categories
-      .filter((category) => categoryMonthlyTotals[category.id] > 0)
+  const yearlyOutlook = useMemo(
+    () => ({
+      income: monthlyIncome * 12,
+      commitments: monthlyCommitments * 12,
+      savings: monthlySavings * 12,
+      net: net * 12
+    }),
+    [monthlyIncome, monthlyCommitments, monthlySavings, net]
+  );
+
+  const insights = useMemo(() => {
+    type InsightBar = { id: string; name: string; value: number; accent: string };
+
+    const spendingBars: InsightBar[] = categories
+      .filter((category) => category.id !== 'income')
       .map((category) => ({
         id: category.id,
         name: category.name,
         value: categoryMonthlyTotals[category.id],
         accent: category.accent
-      }));
+      }))
+      .filter((bar) => bar.value > 0);
 
-    const total = slices.reduce((sum, slice) => sum + slice.value, 0);
+    const spendingTotal = spendingBars.reduce((sum, bar) => sum + bar.value, 0);
 
-    return { slices, total };
-  }, [categories, categoryMonthlyTotals]);
+    const livingCosts = Math.max(monthlyCommitments - monthlySavings, 0);
+    const savings = Math.max(monthlySavings, 0);
+    const net = monthlyIncome - monthlyCommitments;
+    const available = net > 0 ? net : 0;
+    const overBudget = net < 0 ? Math.abs(net) : 0;
+
+    const allocationBars: InsightBar[] = [];
+
+    if (livingCosts > 0) {
+      allocationBars.push({
+        id: 'living-costs',
+        name: 'Living costs & essentials',
+        value: livingCosts,
+        accent: '#93c5fd'
+      });
+    }
+
+    if (savings > 0) {
+      allocationBars.push({
+        id: 'savings',
+        name: 'Savings & investments',
+        value: savings,
+        accent: '#99f6e4'
+      });
+    }
+
+    if (available > 0) {
+      allocationBars.push({
+        id: 'available',
+        name: 'Available to assign',
+        value: available,
+        accent: '#bbf7d0'
+      });
+    }
+
+    if (overBudget > 0) {
+      allocationBars.push({
+        id: 'over-budget',
+        name: 'Over budget',
+        value: overBudget,
+        accent: '#fbcfe8'
+      });
+    }
+
+    const allocationTotal = allocationBars.reduce((sum, bar) => sum + bar.value, 0);
+    const hasAvailable = available > 0;
+
+    return {
+      spending: {
+        bars: spendingBars,
+        total: spendingTotal
+      },
+      allocation: {
+        bars: allocationBars,
+        total: allocationTotal,
+        summaryLabel: hasAvailable ? 'Budget allocation' : 'Budget pressure',
+        summaryHelper: hasAvailable
+          ? 'How your income covers this month’s plan'
+          : 'Where commitments exceed income',
+        summaryValue: monthlyIncome > 0 ? monthlyIncome : allocationTotal
+      }
+    };
+  }, [
+    categories,
+    categoryMonthlyTotals,
+    monthlyCommitments,
+    monthlySavings,
+    monthlyIncome
+  ]);
+
+  const pinnedSummary = useMemo(() => {
+    type PinnedItem = {
+      id: string;
+      name: string;
+      categoryName: string;
+      value: number;
+      accent: string;
+    };
+
+    if (!pinnedTransactionIds.length) {
+      return { items: [] as PinnedItem[], total: 0 };
+    }
+
+    const set = new Set(pinnedTransactionIds);
+    const collected: Omit<PinnedItem, 'accent'>[] = [];
+
+    categories.forEach((category) => {
+      category.transactions.forEach((transaction) => {
+        if (set.has(transaction.id)) {
+          const normalized = Math.abs(
+            transaction.amount * cadenceToMonthlyFactor[transaction.cadence]
+          );
+
+          collected.push({
+            id: transaction.id,
+            name: transaction.label,
+            categoryName: category.name,
+            value: normalized
+          });
+        }
+      });
+    });
+
+    const sorted = collected.sort((a, b) => b.value - a.value);
+
+    const items: PinnedItem[] = sorted.map((item, index) => ({
+      ...item,
+      accent: pinAccentPalette[index % pinAccentPalette.length]
+    }));
+
+    const total = items.reduce((sum, item) => sum + item.value, 0);
+
+    return { items, total };
+  }, [categories, pinnedTransactionIds]);
+
+  const midpoint = Math.ceil(categories.length / 2);
+  const primaryCategories = categories.slice(0, midpoint);
+  const secondaryCategories = categories.slice(midpoint);
 
   return (
     <div className="app-shell">
@@ -424,34 +590,53 @@ export default function App() {
 
       <main className="dashboard">
         <section className="summary-card">
-          <h2>At a glance</h2>
+          <div className="summary-header">
+            <div className="summary-intro">
+              <h2>Monthly summary</h2>
+              <p>
+                Preview how {monthLabel} {selectedYear} is shaping up. Choose a month now and
+                everything will stay synced once Google sign-in and the database connect.
+              </p>
+            </div>
+            <div className="summary-controls">
+              <label className="control-group" htmlFor="summary-month">
+                <span className="control-label">Month</span>
+                <select
+                  id="summary-month"
+                  className="control-select"
+                  value={selectedMonth}
+                  onChange={(event) => setSelectedMonth(event.target.value)}
+                >
+                  {monthOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <span className="summary-pill">{monthLabel} {selectedYear}</span>
+            </div>
+          </div>
           <div className="summary-grid">
             <div className="stat">
-              <span className="stat-label">Monthly commitments</span>
-              <span className="stat-value">{formatCurrency(summary.monthlyCommitments)}</span>
+              <span className="stat-label">Money coming in</span>
+              <span className="stat-value">{formatCurrency(monthlyIncome)}</span>
+              <span className="stat-note">Average monthly income</span>
             </div>
             <div className="stat">
-              <span className="stat-label">Savings cadence</span>
-              <span className="stat-value">{formatCurrency(summary.monthlySavings)}</span>
-              <span className="helper-text">Recurring investments you are prioritizing</span>
+              <span className="stat-label">Money going out</span>
+              <span className="stat-value">{formatCurrency(monthlyCommitments)}</span>
+              <span className="stat-note">Bills, plans, and recurring costs</span>
             </div>
             <div className="stat">
-              <span className="stat-label">Net monthly flow</span>
-              <span className="stat-value">
-                {netPrefix}
-                {formatCurrency(Math.abs(summary.net))}
-              </span>
-              <span className="helper-text">Income minus commitments</span>
+              <span className="stat-label">Set aside for savings</span>
+              <span className="stat-value">{formatCurrency(monthlySavings)}</span>
+              <span className="stat-note">What you’re tucking away every month</span>
             </div>
             <div className="stat">
-              <span className="stat-label">Tracked items</span>
-              <span className="stat-value">{summary.totalTransactions}</span>
-              <span className="helper-text">
-                Heaviest category: {summary.topCategory.name}{' '}
-                {summary.topCategory.total > 0
-                  ? `(${formatCurrency(summary.topCategory.total)}/mo)`
-                  : ''}
-              </span>
+              <span className="stat-label">{netLabel}</span>
+              <span className="stat-value">{formatCurrency(net)}</span>
+              <span className="stat-note">{netNote}</span>
             </div>
           </div>
         </section>
@@ -462,21 +647,228 @@ export default function App() {
         />
       </main>
 
-      <section className="layout-columns">
-        {categories.map((category) => (
-          <CategoryColumn
-            key={category.id}
-            category={category}
-            monthlyTotal={categoryMonthlyTotals[category.id]}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
-            isDropTarget={dropCategoryId === category.id}
-            isDragging={Boolean(dragState)}
-            formatCurrency={formatCurrency}
-          />
-        ))}
+      <section className="section-block insights-section">
+        <div className="section-heading">
+          <div>
+            <h2>Insight spotlight</h2>
+            <p>Glance at the categories shaping your month and how income is working for you.</p>
+          </div>
+        </div>
+        <div className="insights-grid">
+          <article className="insight-card insight-card--spending">
+            <div className="insight-header">
+              <span className="insight-kicker">Spending palette</span>
+              <h2>Explore commitments by category</h2>
+              <p>
+                Hover or focus the bars to surface the category totals that shape your monthly
+                commitments.
+              </p>
+            </div>
+            <div className="insight-summary">
+              <span className="insight-summary-label">Monthly commitments</span>
+              <span className="insight-summary-value">
+                {formatCurrency(insights.spending.total)}
+              </span>
+            </div>
+            <InsightList
+              data={insights.spending.bars}
+              total={insights.spending.total}
+              formatCurrency={formatCurrency}
+              ariaLabel="Monthly commitments by category"
+              emptyMessage="Add expenses to visualize your commitments."
+            />
+          </article>
+
+          <article className="insight-card insight-card--allocation">
+            <div className="insight-header">
+              <span className="insight-kicker">Budget pulse</span>
+              <h2>Follow where the next dollar goes</h2>
+              <p>
+                Compare how income supports living costs, savings goals, and any over-budget
+                pressure.
+              </p>
+            </div>
+            <div className="insight-summary">
+              <span className="insight-summary-label">{insights.allocation.summaryLabel}</span>
+              <span className="insight-summary-value">
+                {formatCurrency(insights.allocation.summaryValue)}
+              </span>
+              <span className="insight-summary-helper">{insights.allocation.summaryHelper}</span>
+            </div>
+            <InsightList
+              data={insights.allocation.bars}
+              total={insights.allocation.total}
+              formatCurrency={formatCurrency}
+              ariaLabel="Monthly budget allocation"
+              emptyMessage="Track income and commitments to see your allocation."
+            />
+          </article>
+        </div>
+      </section>
+
+      <section className="section-block categories-section">
+        <div className="section-heading">
+          <div>
+            <h2>Categories & transactions</h2>
+            <p>
+              Refine each spending lane, keep tabs on routine payments, and pin anything you want to
+              revisit later.
+            </p>
+          </div>
+        </div>
+        <div className="category-layout">
+          <div className="category-layout__row category-layout__row--primary">
+            {primaryCategories.map((category) => (
+              <CategoryColumn
+                key={category.id}
+                category={category}
+                monthlyTotal={categoryMonthlyTotals[category.id]}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                isDropTarget={dropCategoryId === category.id}
+                isDragging={Boolean(dragState)}
+                formatCurrency={formatCurrency}
+                onTogglePin={togglePinnedTransaction}
+                pinnedTransactionIds={pinnedTransactionSet}
+              />
+            ))}
+          </div>
+          {secondaryCategories.length ? (
+            <div className="category-layout__row category-layout__row--secondary">
+              {secondaryCategories.map((category) => (
+                <CategoryColumn
+                  key={category.id}
+                  category={category}
+                  monthlyTotal={categoryMonthlyTotals[category.id]}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
+                  onDrop={handleDrop}
+                  onDragOver={handleDragOver}
+                  isDropTarget={dropCategoryId === category.id}
+                  isDragging={Boolean(dragState)}
+                  formatCurrency={formatCurrency}
+                  onTogglePin={togglePinnedTransaction}
+                  pinnedTransactionIds={pinnedTransactionSet}
+                />
+              ))}
+            </div>
+          ) : null}
+        </div>
+      </section>
+
+      <section className="section-block pinned-section">
+        <div className="pinned-card">
+          <div className="pinned-header">
+            <h2>Pinned transactions</h2>
+            <p>
+              Hover a transaction above and tap the pin to watch it here. We’ll keep these synced
+              once sign-in and the database ship.
+            </p>
+          </div>
+
+          {pinnedSummary.items.length ? (
+            <>
+              <div
+                className="pinned-bar"
+                role="list"
+                aria-label="Pinned transaction totals"
+              >
+                {pinnedSummary.items.map((item) => {
+                  const percentage = pinnedSummary.total
+                    ? (item.value / pinnedSummary.total) * 100
+                    : 0;
+
+                  return (
+                    <div
+                      key={item.id}
+                      className="pinned-bar__segment"
+                      style={{ width: `${percentage}%`, background: item.accent }}
+                      title={`${item.name} • ${formatCurrency(item.value)} per month`}
+                      role="listitem"
+                      tabIndex={0}
+                      aria-label={`${item.name} from ${item.categoryName} worth ${formatCurrency(
+                        item.value
+                      )} per month`}
+                    >
+                      <span className="pinned-bar__tooltip">
+                        <strong>{item.name}</strong>
+                        <span>{formatCurrency(item.value)} / month</span>
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <InsightList
+                data={pinnedSummary.items.map((item) => ({
+                  id: item.id,
+                  name: `${item.name} • ${item.categoryName}`,
+                  value: item.value,
+                  accent: item.accent
+                }))}
+                total={pinnedSummary.total}
+                formatCurrency={formatCurrency}
+                ariaLabel="Pinned transactions list"
+                emptyMessage="Pin transactions above to keep them in view."
+              />
+            </>
+          ) : (
+            <div className="pinned-empty" role="status">
+              Pin any transaction from the categories above to track it here.
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className="section-block yearly-section">
+        <div className="yearly-card">
+          <div className="yearly-header">
+            <div className="yearly-intro">
+              <h2>Yearly breakdown</h2>
+              <p>
+                Projected totals for {selectedYear}. Choose the year you want to preview – syncing
+                will stay automatic once Google sign-in and the database land.
+              </p>
+            </div>
+            <label className="control-group" htmlFor="yearly-year">
+              <span className="control-label">Year</span>
+              <select
+                id="yearly-year"
+                className="control-select"
+                value={selectedYear}
+                onChange={(event) => setSelectedYear(event.target.value)}
+              >
+                {yearOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div className="yearly-grid">
+            <div className="yearly-stat">
+              <span className="yearly-label">Yearly income</span>
+              <span className="yearly-value">{formatCurrency(yearlyOutlook.income)}</span>
+            </div>
+            <div className="yearly-stat">
+              <span className="yearly-label">Yearly bills & plans</span>
+              <span className="yearly-value">{formatCurrency(yearlyOutlook.commitments)}</span>
+            </div>
+            <div className="yearly-stat">
+              <span className="yearly-label">Saved across the year</span>
+              <span className="yearly-value">{formatCurrency(yearlyOutlook.savings)}</span>
+            </div>
+            <div className="yearly-stat">
+              <span className="yearly-label">
+                {yearlyOutlook.net >= 0 ? 'Estimated cushion' : 'Projected shortfall'}
+              </span>
+              <span className="yearly-value">{formatCurrency(yearlyOutlook.net)}</span>
+            </div>
+          </div>
+        </div>
       </section>
 
       {dragState ? (
@@ -497,10 +889,10 @@ export default function App() {
         </div>
       ) : null}
 
-      <p className="footer-note">
+      <footer className="footer-note">
         Flow Ledger is intentionally mobile-first and ready for the moment it becomes a dedicated
         app – your data model and interactions will translate smoothly.
-      </p>
+      </footer>
     </div>
   );
 }

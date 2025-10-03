@@ -1,5 +1,11 @@
-import { DragEvent } from 'react';
+import { DragEvent, MouseEvent } from 'react';
 import { Category, CategoryKey, Transaction } from '../types';
+
+const transactionDateFormatter = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric'
+});
 
 interface CategoryColumnProps {
   category: Category;
@@ -11,6 +17,8 @@ interface CategoryColumnProps {
   isDropTarget: boolean;
   isDragging: boolean;
   formatCurrency: (value: number) => string;
+  onTogglePin: (transactionId: string) => void;
+  pinnedTransactionIds: Set<string>;
 }
 
 export function CategoryColumn({
@@ -22,7 +30,9 @@ export function CategoryColumn({
   onDragOver,
   isDropTarget,
   isDragging,
-  formatCurrency
+  formatCurrency,
+  onTogglePin,
+  pinnedTransactionIds
 }: CategoryColumnProps) {
   const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
     if (!isDragging) {
@@ -39,9 +49,18 @@ export function CategoryColumn({
   };
 
   const renderTransaction = (transaction: Transaction) => {
+    const isPinned = pinnedTransactionIds.has(transaction.id);
     const amountClass = `transaction-amount ${transaction.flow.toLowerCase()}`;
     const amountPrefix = transaction.flow === 'Expense' ? '-' : '+';
     const displayAmount = `${amountPrefix}${formatCurrency(transaction.amount)}`;
+    const metaParts: string[] = [transaction.flow, transaction.cadence];
+
+    if (transaction.date) {
+      const parsed = new Date(transaction.date);
+      if (!Number.isNaN(parsed.valueOf())) {
+        metaParts.push(transactionDateFormatter.format(parsed));
+      }
+    }
 
     const handleTransactionDragStart = (
       event: DragEvent<HTMLDivElement>,
@@ -52,19 +71,33 @@ export function CategoryColumn({
       onDragStart(category.id, transactionId);
     };
 
+    const handlePinClick = (event: MouseEvent<HTMLButtonElement>) => {
+      event.stopPropagation();
+      event.preventDefault();
+      onTogglePin(transaction.id);
+    };
+
     return (
       <div
         key={transaction.id}
-        className="transaction-card"
+        className={`transaction-card ${isPinned ? 'transaction-card--pinned' : ''}`}
         draggable
         onDragStart={(event) => handleTransactionDragStart(event, transaction.id)}
         onDragEnd={onDragEnd}
       >
+        <button
+          type="button"
+          className={`transaction-pin ${isPinned ? 'is-pinned' : ''}`}
+          onClick={handlePinClick}
+          onMouseDown={(event) => event.stopPropagation()}
+          aria-pressed={isPinned}
+          aria-label={`${isPinned ? 'Unpin' : 'Pin'} ${transaction.label}`}
+        >
+          📌
+        </button>
         <div className="transaction-info">
           <span className="transaction-label">{transaction.label}</span>
-          <span className="transaction-meta">
-            {transaction.flow} • {transaction.cadence}
-          </span>
+          <span className="transaction-meta">{metaParts.join(' • ')}</span>
           {transaction.note ? (
             <span className="transaction-meta">{transaction.note}</span>
           ) : null}
@@ -78,7 +111,7 @@ export function CategoryColumn({
     <section
       className={`category-card ${isDropTarget ? 'drop-target' : ''}`}
       style={{
-        background: `linear-gradient(160deg, rgba(15,23,42,0.85), rgba(15,23,42,0.7)), linear-gradient(160deg, ${category.accent}, rgba(15, 23, 42, 0.95))`
+        background: `linear-gradient(160deg, ${category.accent}22, ${category.accent}36), linear-gradient(160deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.72))`
       }}
     >
       <header className="category-header">
@@ -86,7 +119,10 @@ export function CategoryColumn({
           <div className="category-title">{category.name}</div>
           <div className="category-total">{formatCurrency(monthlyTotal)} per month</div>
         </div>
-        <span className="category-chip" style={{ borderColor: category.accent, color: '#0f172a', background: '#f8fafc' }}>
+        <span
+          className="category-chip"
+          style={{ borderColor: `${category.accent}66`, background: 'rgba(255, 255, 255, 0.75)' }}
+        >
           <span
             style={{
               display: 'inline-block',

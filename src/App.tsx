@@ -567,7 +567,7 @@ export default function App() {
       <main className="dashboard">
         <section className="summary-card">
           <div className="summary-header">
-            <h2>Quick Summary</h2>
+            <h2>Monthly Summary</h2>
             <p>
               A simple snapshot of this month’s plan. These numbers will stay in sync once Google
               sign-in and the database arrive.

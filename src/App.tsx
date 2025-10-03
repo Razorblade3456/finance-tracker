@@ -1,4 +1,11 @@
-import { DragEvent as ReactDragEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  DragEvent as ReactDragEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState
+} from 'react';
 import { Category, CategoryKey, Transaction, TransactionCadence } from './types';
 import { CategoryColumn } from './components/CategoryColumn';
 import { TransactionForm } from './components/TransactionForm';
@@ -29,7 +36,26 @@ const seededTransaction = (
   ...overrides
 });
 
-const initialCategories: Category[] = [
+const getTransactionTimestamp = (transaction: Transaction) => {
+  if (transaction.date) {
+    const parsed = new Date(transaction.date);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed.getTime();
+    }
+  }
+
+  const createdAt = new Date(transaction.createdAt);
+  if (!Number.isNaN(createdAt.getTime())) {
+    return createdAt.getTime();
+  }
+
+  return 0;
+};
+
+const sortTransactionsByRecency = (transactions: Transaction[]) =>
+  [...transactions].sort((a, b) => getTransactionTimestamp(b) - getTransactionTimestamp(a));
+
+const baseCategories: Category[] = [
   {
     id: 'income',
     name: 'Income',
@@ -149,6 +175,13 @@ const initialCategories: Category[] = [
   }
 ];
 
+const initialCategories: Category[] = baseCategories.map((category) => ({
+  ...category,
+  transactions: sortTransactionsByRecency(category.transactions)
+}));
+
+type CategoryWithMonthlyTotal = Category & { monthlyTotal: number };
+
 const pinAccentPalette = ['#fbcfe8', '#bae6fd', '#bbf7d0', '#fde68a', '#ddd6fe'];
 
 export default function App() {
@@ -161,6 +194,7 @@ export default function App() {
   const [isTrashHovered, setIsTrashHovered] = useState(false);
   const [pinnedTransactionIds, setPinnedTransactionIds] = useState<string[]>([]);
   const [sidebarCategoryId, setSidebarCategoryId] = useState<CategoryKey | null>(null);
+  const categoryMonthMenuRef = useRef<HTMLDivElement | null>(null);
   const monthOptions = useMemo(
     () =>
       Array.from({ length: 12 }, (_, index) => {
@@ -182,6 +216,7 @@ export default function App() {
     return Array.from({ length: 5 }, (_, index) => String(currentYear - 2 + index));
   }, []);
   const [selectedYear, setSelectedYear] = useState(() => String(new Date().getFullYear()));
+  const [isCategoryMonthMenuOpen, setCategoryMonthMenuOpen] = useState(false);
 
   const formatter = useMemo(
     () =>
@@ -319,7 +354,10 @@ export default function App() {
         category.id === payload.categoryId
           ? {
               ...category,
-              transactions: [...category.transactions, newTransaction]
+              transactions: sortTransactionsByRecency([
+                ...category.transactions,
+                newTransaction
+              ])
             }
           : category
       )
@@ -391,7 +429,7 @@ export default function App() {
 
         return {
           ...category,
-          transactions: remaining
+          transactions: sortTransactionsByRecency(remaining)
         };
       });
 
@@ -403,7 +441,10 @@ export default function App() {
         category.id === toCategory
           ? {
               ...category,
-              transactions: [...category.transactions, transactionToMove!]
+              transactions: sortTransactionsByRecency([
+                ...category.transactions,
+                transactionToMove!
+              ])
             }
           : category
       );
@@ -444,7 +485,9 @@ export default function App() {
         category.id === categoryId
           ? {
               ...category,
-              transactions: category.transactions.filter((transaction) => transaction.id !== transactionId)
+              transactions: sortTransactionsByRecency(
+                category.transactions.filter((transaction) => transaction.id !== transactionId)
+              )
             }
           : category
       )
@@ -623,30 +666,42 @@ export default function App() {
     return { items, total };
   }, [categories, pinnedTransactionIds]);
 
-  const filteredCategories = useMemo(() => {
+  const filteredCategories = useMemo<CategoryWithMonthlyTotal[]>(() => {
     const monthIndex = Number(selectedMonth);
     const yearNumber = Number(selectedYear);
 
     return categories.map((category) => {
-      const scopedTransactions = category.transactions.filter((transaction) => {
-        if (!transaction.date) {
-          return true;
+      const scopedTransactions = sortTransactionsByRecency(
+        category.transactions.filter((transaction) => {
+          if (!transaction.date) {
+            return true;
+          }
+
+          const parsed = new Date(transaction.date);
+          if (Number.isNaN(parsed.getTime())) {
+            return true;
+          }
+
+          const matchesMonth = Number.isNaN(monthIndex) ? true : parsed.getMonth() === monthIndex;
+          const matchesYear = Number.isNaN(yearNumber) ? true : parsed.getFullYear() === yearNumber;
+
+          return matchesMonth && matchesYear;
+        })
+      );
+
+      const monthlyTotal = scopedTransactions.reduce((sum, transaction) => {
+        const normalized = transaction.amount * cadenceToMonthlyFactor[transaction.cadence];
+        if (transaction.flow === 'Income') {
+          return sum - normalized;
         }
 
-        const parsed = new Date(transaction.date);
-        if (Number.isNaN(parsed.getTime())) {
-          return true;
-        }
-
-        const matchesMonth = Number.isNaN(monthIndex) ? true : parsed.getMonth() === monthIndex;
-        const matchesYear = Number.isNaN(yearNumber) ? true : parsed.getFullYear() === yearNumber;
-
-        return matchesMonth && matchesYear;
-      });
+        return sum + normalized;
+      }, 0);
 
       return {
         ...category,
-        transactions: scopedTransactions
+        transactions: scopedTransactions,
+        monthlyTotal
       };
     });
   }, [categories, selectedMonth, selectedYear]);
@@ -662,7 +717,7 @@ export default function App() {
     [filteredCategories, sidebarCategoryId]
   );
 
-  type ExportTarget = 'monthly' | 'yearly' | 'categories' | 'insights' | 'pinned';
+  type ExportTarget = 'monthly' | 'yearly';
 
   const downloadCsv = useCallback((fileName: string, headers: string[], rows: (string | number)[][]) => {
     if (!rows.length) {
@@ -728,77 +783,16 @@ export default function App() {
         downloadCsv(`yearly-breakdown-${selectedYear}.csv`, headers, rows);
         return;
       }
-
-      if (target === 'categories') {
-        const headers = [
-          'Category',
-          'Transaction',
-          'Flow',
-          'Cadence',
-          'Original amount',
-          'Monthly equivalent',
-          'Date',
-          'Notes'
-        ];
-
-        const rows: (string | number)[][] = categories.flatMap((category) =>
-          category.transactions.map((transaction) => {
-            const monthlyEquivalent =
-              transaction.amount * cadenceToMonthlyFactor[transaction.cadence];
-
-            return [
-              category.name,
-              transaction.label,
-              transaction.flow,
-              transaction.cadence,
-              formatCurrency(transaction.amount),
-              formatCurrency(monthlyEquivalent),
-              formatDate(transaction.date),
-              transaction.note || ''
-            ];
-          })
-        );
-
-        downloadCsv('categories-transactions.csv', headers, rows);
-        return;
-      }
-
-      if (target === 'insights') {
-        const headers = ['Insight group', 'Label', 'Amount'];
-        const rows: (string | number)[][] = [
-          ...insights.spending.bars.map((bar) => ['Spending commitments', bar.name, formatCurrency(bar.value)]),
-          ...insights.allocation.bars.map((bar) => ['Budget allocation', bar.name, formatCurrency(bar.value)])
-        ];
-
-        downloadCsv('insights-overview.csv', headers, rows);
-        return;
-      }
-
-      if (target === 'pinned') {
-        const headers = ['Pinned item', 'Category', 'Monthly value'];
-        const rows: (string | number)[][] = pinnedSummary.items.map((item) => [
-          item.name,
-          item.categoryName,
-          formatCurrency(item.value)
-        ]);
-
-        downloadCsv('pinned-transactions.csv', headers, rows);
-      }
     },
     [
-      categories,
       downloadCsv,
       formatCurrency,
-      formatDate,
-      insights.allocation.bars,
-      insights.spending.bars,
       monthlyCommitments,
       monthlyIncome,
       monthlySavings,
       net,
       netLabel,
       netNote,
-      pinnedSummary.items,
       selectedMonth,
       selectedYear,
       yearlyOutlook.commitments,
@@ -807,6 +801,28 @@ export default function App() {
       yearlyOutlook.savings
     ]
   );
+
+  useEffect(() => {
+    if (!isCategoryMonthMenuOpen) {
+      return;
+    }
+
+    const handleClick = (event: MouseEvent) => {
+      if (!categoryMonthMenuRef.current?.contains(event.target as Node)) {
+        setCategoryMonthMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClick);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+    };
+  }, [isCategoryMonthMenuOpen]);
+
+  useEffect(() => {
+    setCategoryMonthMenuOpen(false);
+  }, [selectedMonth, selectedYear]);
 
   return (
     <div className="app-shell">
@@ -891,14 +907,6 @@ export default function App() {
             <h2>Insight spotlight</h2>
             <p>Glance at the categories shaping your month and how income is working for you.</p>
           </div>
-          <div className="section-heading__actions">
-            <DownloadButton
-              label="Download insights"
-              onClick={() => handleDownload('insights')}
-              disabled={!insights.spending.bars.length && !insights.allocation.bars.length}
-              aria-label="Download insight spotlight data"
-            />
-          </div>
         </div>
         <div className="insights-grid">
           <article className="insight-card insight-card--spending">
@@ -962,12 +970,38 @@ export default function App() {
             </p>
           </div>
           <div className="section-heading__actions">
-            <DownloadButton
-              label="Download transactions"
-              onClick={() => handleDownload('categories')}
-              disabled={!categories.some((category) => category.transactions.length)}
-              aria-label="Download all category transactions"
-            />
+            <div className="category-month-picker" ref={categoryMonthMenuRef}>
+              <button
+                type="button"
+                className="category-month-button"
+                onClick={() => setCategoryMonthMenuOpen((previous) => !previous)}
+                aria-expanded={isCategoryMonthMenuOpen}
+                aria-haspopup="listbox"
+              >
+                {monthLabel} {selectedYear}
+              </button>
+              {isCategoryMonthMenuOpen ? (
+                <div className="category-month-menu" role="listbox" aria-label="Choose month">
+                  {monthOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      className={`category-month-option ${
+                        option.value === selectedMonth ? 'is-active' : ''
+                      }`}
+                      role="option"
+                      aria-selected={option.value === selectedMonth}
+                      onClick={() => {
+                        setSelectedMonth(option.value);
+                        setCategoryMonthMenuOpen(false);
+                      }}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
         <div className="category-layout">
@@ -976,7 +1010,7 @@ export default function App() {
               <CategoryColumn
                 key={category.id}
                 category={category}
-                monthlyTotal={categoryMonthlyTotals[category.id]}
+                monthlyTotal={category.monthlyTotal}
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
                 onDrop={handleDrop}
@@ -996,7 +1030,7 @@ export default function App() {
                 <CategoryColumn
                   key={category.id}
                   category={category}
-                  monthlyTotal={categoryMonthlyTotals[category.id]}
+                  monthlyTotal={category.monthlyTotal}
                   onDragStart={handleDragStart}
                   onDragEnd={handleDragEnd}
                   onDrop={handleDrop}
@@ -1116,12 +1150,6 @@ export default function App() {
                 once sign-in and the database ship.
               </p>
             </div>
-            <DownloadButton
-              label="Download pinned"
-              onClick={() => handleDownload('pinned')}
-              disabled={!pinnedSummary.items.length}
-              aria-label="Download pinned transactions"
-            />
           </div>
 
           {pinnedSummary.items.length ? (

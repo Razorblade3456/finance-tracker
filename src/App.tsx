@@ -2,7 +2,7 @@ import { DragEvent as ReactDragEvent, useEffect, useMemo, useState } from 'react
 import { Category, CategoryKey, Transaction, TransactionCadence } from './types';
 import { CategoryColumn } from './components/CategoryColumn';
 import { TransactionForm } from './components/TransactionForm';
-import { CategoryBarChart } from './components/CategoryBarChart';
+import { InsightList } from './components/InsightList';
 
 const cadenceToMonthlyFactor: Record<TransactionCadence, number> = {
   Weekly: 4,
@@ -536,15 +536,16 @@ export default function App() {
                 commitments.
               </p>
             </div>
-            <CategoryBarChart
+            <div className="insight-summary">
+              <span className="insight-summary-label">Monthly commitments</span>
+              <span className="insight-summary-value">
+                {formatCurrency(insights.spending.total)}
+              </span>
+            </div>
+            <InsightList
               data={insights.spending.bars}
               total={insights.spending.total}
               formatCurrency={formatCurrency}
-              summaryLabel="Monthly commitments"
-              summaryHelper="Across all tracked spending categories"
-              activeSummaryHelper={(bar) =>
-                `${bar.percentage.toFixed(1)}% of monthly commitments`
-              }
               ariaLabel="Monthly commitments by category"
               emptyMessage="Add expenses to visualize your commitments."
             />
@@ -559,16 +560,17 @@ export default function App() {
                 pressure.
               </p>
             </div>
-            <CategoryBarChart
+            <div className="insight-summary">
+              <span className="insight-summary-label">{insights.allocation.summaryLabel}</span>
+              <span className="insight-summary-value">
+                {formatCurrency(insights.allocation.summaryValue)}
+              </span>
+              <span className="insight-summary-helper">{insights.allocation.summaryHelper}</span>
+            </div>
+            <InsightList
               data={insights.allocation.bars}
               total={insights.allocation.total}
               formatCurrency={formatCurrency}
-              summaryLabel={insights.allocation.summaryLabel}
-              summaryHelper={insights.allocation.summaryHelper}
-              summaryValue={insights.allocation.summaryValue}
-              activeSummaryHelper={(bar) =>
-                `${bar.percentage.toFixed(1)}% of your monthly income`
-              }
               ariaLabel="Monthly budget allocation"
               emptyMessage="Track income and commitments to see your allocation."
             />

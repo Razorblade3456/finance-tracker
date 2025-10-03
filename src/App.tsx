@@ -3,7 +3,6 @@ import { Category, CategoryKey, PinNote, Transaction, TransactionCadence } from 
 import { CategoryColumn } from './components/CategoryColumn';
 import { TransactionForm } from './components/TransactionForm';
 import { InsightList } from './components/InsightList';
-import { PinBoard } from './components/PinBoard';
 
 const cadenceToMonthlyFactor: Record<TransactionCadence, number> = {
   Weekly: 4,
@@ -180,6 +179,8 @@ export default function App() {
   const [dropCategoryId, setDropCategoryId] = useState<CategoryKey | null>(null);
   const [isTrashHovered, setIsTrashHovered] = useState(false);
   const [pins, setPins] = useState<PinNote[]>(initialPinNotes);
+  const [newPinLabel, setNewPinLabel] = useState('');
+  const [newPinDetail, setNewPinDetail] = useState('');
 
   const formatter = useMemo(
     () =>
@@ -297,7 +298,14 @@ export default function App() {
     );
   };
 
-  const handleAddPin = (label: string, detail: string) => {
+  const handleAddPin = () => {
+    const label = newPinLabel.trim();
+    const detail = newPinDetail.trim();
+
+    if (!label) {
+      return;
+    }
+
     setPins((current) => {
       const accent = pinAccentPalette[current.length % pinAccentPalette.length];
 
@@ -311,39 +319,13 @@ export default function App() {
         }
       ];
     });
+
+    setNewPinLabel('');
+    setNewPinDetail('');
   };
 
-  const handleReorderPins = (draggedId: string, targetId: string | null) => {
-    setPins((current) => {
-      const draggedIndex = current.findIndex((pin) => pin.id === draggedId);
-
-      if (draggedIndex === -1) {
-        return current;
-      }
-
-      const reordered = [...current];
-      const [draggedPin] = reordered.splice(draggedIndex, 1);
-
-      if (!targetId) {
-        reordered.push(draggedPin);
-        return reordered;
-      }
-
-      if (targetId === draggedId) {
-        reordered.splice(draggedIndex, 0, draggedPin);
-        return reordered;
-      }
-
-      const targetIndex = reordered.findIndex((pin) => pin.id === targetId);
-
-      if (targetIndex === -1) {
-        reordered.push(draggedPin);
-        return reordered;
-      }
-
-      reordered.splice(targetIndex, 0, draggedPin);
-      return reordered;
-    });
+  const handleRemovePin = (pinId: string) => {
+    setPins((current) => current.filter((pin) => pin.id !== pinId));
   };
 
   const moveTransaction = (fromCategory: CategoryKey, toCategory: CategoryKey, transactionId: string) => {
@@ -575,29 +557,114 @@ export default function App() {
 
       <main className="dashboard">
         <section className="summary-card">
-          <h2>At a glance</h2>
-          <div className="summary-grid">
-            <div className="stat">
-              <span className="stat-label">Money coming in</span>
-              <span className="stat-value">{formatCurrency(monthlyIncome)}</span>
-              <span className="stat-note">Average monthly income</span>
+            <div className="summary-header">
+              <h2>At a glance</h2>
+              <p>
+                Quick math on where your money sits each month plus a space to pin habits you want
+                to watch.
+              </p>
             </div>
-            <div className="stat">
-              <span className="stat-label">Money going out</span>
-              <span className="stat-value">{formatCurrency(monthlyCommitments)}</span>
-              <span className="stat-note">Bills, plans, and recurring costs</span>
+            <div className="summary-grid">
+              <div className="stat">
+                <span className="stat-label">Money coming in</span>
+                <span className="stat-value">{formatCurrency(monthlyIncome)}</span>
+                <span className="stat-note">Average monthly income</span>
+              </div>
+              <div className="stat">
+                <span className="stat-label">Money going out</span>
+                <span className="stat-value">{formatCurrency(monthlyCommitments)}</span>
+                <span className="stat-note">Bills, plans, and recurring costs</span>
+              </div>
+              <div className="stat">
+                <span className="stat-label">Set aside for savings</span>
+                <span className="stat-value">{formatCurrency(monthlySavings)}</span>
+                <span className="stat-note">What you’re tucking away every month</span>
+              </div>
+              <div className="stat">
+                <span className="stat-label">{netLabel}</span>
+                <span className="stat-value">{formatCurrency(net)}</span>
+                <span className="stat-note">{netNote}</span>
+              </div>
             </div>
-            <div className="stat">
-              <span className="stat-label">Set aside for savings</span>
-              <span className="stat-value">{formatCurrency(monthlySavings)}</span>
-              <span className="stat-note">What you’re tucking away every month</span>
+
+            <div className="summary-pinboard">
+              <div className="summary-pinboard__intro">
+                <div>
+                  <span className="summary-pinboard__kicker">Pinned reminders</span>
+                  <h3>Keep the habits you’re trimming front and center</h3>
+                </div>
+                <p>
+                  Add quick pins for spending to watch so they stay with your core numbers. Drag and
+                  drop will arrive with the upcoming account sync.
+                </p>
+              </div>
+              <form
+                className="summary-pinboard__form"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  handleAddPin();
+                }}
+              >
+                <label htmlFor="new-pin" className="summary-pinboard__label">
+                  What do you want to watch?
+                </label>
+                <div className="summary-pinboard__inputs">
+                  <input
+                    id="new-pin"
+                    name="new-pin"
+                    value={newPinLabel}
+                    onChange={(event) => setNewPinLabel(event.target.value)}
+                    placeholder="Example: Late-night delivery"
+                    autoComplete="off"
+                  />
+                  <input
+                    id="new-pin-detail"
+                    name="new-pin-detail"
+                    value={newPinDetail}
+                    onChange={(event) => setNewPinDetail(event.target.value)}
+                    placeholder="Add a quick note (optional)"
+                    autoComplete="off"
+                  />
+                  <button type="submit">Pin it</button>
+                </div>
+              </form>
+
+              <div className="summary-pinboard__list" aria-live="polite">
+                {pins.length === 0 ? (
+                  <div className="summary-pinboard__empty">No pins yet — add one above to start.</div>
+                ) : (
+                  <ul>
+                    {pins.map((pin) => (
+                      <li key={pin.id} className="summary-pinboard__item">
+                        <span
+                          className="summary-pinboard__swatch"
+                          aria-hidden="true"
+                          style={{ background: pin.accent }}
+                        />
+                        <div className="summary-pinboard__text">
+                          <span className="summary-pinboard__title">{pin.label}</span>
+                          {pin.detail ? (
+                            <span className="summary-pinboard__detail">{pin.detail}</span>
+                          ) : (
+                            <span className="summary-pinboard__detail summary-pinboard__detail--muted">
+                              Add a detail any time.
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          className="summary-pinboard__remove"
+                          onClick={() => handleRemovePin(pin.id)}
+                          aria-label={`Remove pin ${pin.label}`}
+                        >
+                          Remove
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </div>
-            <div className="stat">
-              <span className="stat-label">{netLabel}</span>
-              <span className="stat-value">{formatCurrency(net)}</span>
-              <span className="stat-note">{netNote}</span>
-            </div>
-          </div>
         </section>
 
         <TransactionForm
@@ -674,10 +741,6 @@ export default function App() {
             formatCurrency={formatCurrency}
           />
         ))}
-      </section>
-
-      <section className="pin-section">
-        <PinBoard pins={pins} onAddPin={handleAddPin} onReorder={handleReorderPins} />
       </section>
 
       <section className="yearly-section">

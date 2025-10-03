@@ -45,7 +45,7 @@ const initialCategories: Category[] = [
   },
   {
     id: 'financial-obligations',
-    name: 'Financial obligations',
+    name: 'Expenses',
     accent: '#93c5fd',
     description: 'Mortgages, rent, insurance and the must-pay bills that keep life stable.',
     transactions: [
@@ -402,10 +402,10 @@ export default function App() {
 
   const { monthlyCommitments, monthlySavings, monthlyIncome, net } = summary;
   const hasMonthlyLeftover = net >= 0;
-  const netLabel = hasMonthlyLeftover ? 'Left after bills' : 'Short this month';
+  const netLabel = hasMonthlyLeftover ? 'Left after bills' : 'Income after expenses';
   const netNote = hasMonthlyLeftover
     ? 'Use this for goals or flexible spending'
-    : 'Plan to cover this gap soon';
+    : 'This is what is left after monthly expenses';
 
   const yearlyOutlook = useMemo(
     () => ({
@@ -490,7 +490,7 @@ export default function App() {
         summaryLabel: hasAvailable ? 'Budget allocation' : 'Budget pressure',
         summaryHelper: hasAvailable
           ? 'How your income covers this month’s plan'
-          : 'Where commitments exceed income',
+          : 'Where expenses exceed income',
         summaryValue: monthlyIncome > 0 ? monthlyIncome : allocationTotal
       }
     };
@@ -567,7 +567,7 @@ export default function App() {
       <main className="dashboard">
         <section className="summary-card">
           <div className="summary-header">
-            <h2>At a glance</h2>
+            <h2>Quick Summary</h2>
             <p>
               A simple snapshot of this month’s plan. These numbers will stay in sync once Google
               sign-in and the database arrive.
@@ -575,19 +575,19 @@ export default function App() {
           </div>
           <div className="summary-grid">
             <div className="stat">
-              <span className="stat-label">Money coming in</span>
+              <span className="stat-label">Income</span>
               <span className="stat-value">{formatCurrency(monthlyIncome)}</span>
-              <span className="stat-note">Average monthly income</span>
+              <span className="stat-note">Your Average monthly income</span>
             </div>
             <div className="stat">
-              <span className="stat-label">Money going out</span>
+              <span className="stat-label">Expenses</span>
               <span className="stat-value">{formatCurrency(monthlyCommitments)}</span>
               <span className="stat-note">Bills, plans, and recurring costs</span>
             </div>
             <div className="stat">
-              <span className="stat-label">Set aside for savings</span>
+              <span className="stat-label">Money set aside</span>
               <span className="stat-value">{formatCurrency(monthlySavings)}</span>
-              <span className="stat-note">What you’re tucking away every month</span>
+              <span className="stat-note">What you’re saving away every month</span>
             </div>
             <div className="stat">
               <span className="stat-label">{netLabel}</span>
@@ -606,18 +606,17 @@ export default function App() {
       <section className="section-block insights-section">
         <div className="section-heading">
           <div>
-            <h2>Insight spotlight</h2>
+            <h2>Expense spotlight</h2>
             <p>Glance at the categories shaping your month and how income is working for you.</p>
           </div>
         </div>
         <div className="insights-grid">
           <article className="insight-card insight-card--spending">
             <div className="insight-header">
-              <span className="insight-kicker">Spending palette</span>
-              <h2>Explore commitments by category</h2>
+              <h2>Explore Expenses by category</h2>
               <p>
                 Hover or focus the bars to surface the category totals that shape your monthly
-                commitments.
+                Expenses.
               </p>
             </div>
             <div className="insight-summary">
@@ -638,7 +637,7 @@ export default function App() {
           <article className="insight-card insight-card--allocation">
             <div className="insight-header">
               <span className="insight-kicker">Budget pulse</span>
-              <h2>Follow where the next dollar goes</h2>
+              <h2>Keep track of your income</h2>
               <p>
                 Compare how income supports living costs, savings goals, and any over-budget
                 pressure.

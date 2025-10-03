@@ -384,8 +384,22 @@ export default function App() {
     deleteTransaction(dragState.fromCategoryId, dragState.transactionId);
   };
 
-  const netPrefix = summary.net >= 0 ? '+' : '-';
-  const { monthlyCommitments, monthlySavings, monthlyIncome } = summary;
+  const { monthlyCommitments, monthlySavings, monthlyIncome, net } = summary;
+  const hasMonthlyLeftover = net >= 0;
+  const netLabel = hasMonthlyLeftover ? 'Left after bills' : 'Short this month';
+  const netNote = hasMonthlyLeftover
+    ? 'Use this for goals or flexible spending'
+    : 'Plan to cover this gap soon';
+
+  const yearlyOutlook = useMemo(
+    () => ({
+      income: monthlyIncome * 12,
+      commitments: monthlyCommitments * 12,
+      savings: monthlySavings * 12,
+      net: net * 12
+    }),
+    [monthlyIncome, monthlyCommitments, monthlySavings, net]
+  );
 
   const insights = useMemo(() => {
     type InsightBar = { id: string; name: string; value: number; accent: string };
@@ -490,31 +504,24 @@ export default function App() {
           <h2>At a glance</h2>
           <div className="summary-grid">
             <div className="stat">
-              <span className="stat-label">Monthly commitments</span>
-              <span className="stat-value">{formatCurrency(summary.monthlyCommitments)}</span>
+              <span className="stat-label">Money coming in</span>
+              <span className="stat-value">{formatCurrency(monthlyIncome)}</span>
+              <span className="stat-note">Average monthly income</span>
             </div>
             <div className="stat">
-              <span className="stat-label">Savings cadence</span>
-              <span className="stat-value">{formatCurrency(summary.monthlySavings)}</span>
-              <span className="helper-text">Recurring investments you are prioritizing</span>
+              <span className="stat-label">Money going out</span>
+              <span className="stat-value">{formatCurrency(monthlyCommitments)}</span>
+              <span className="stat-note">Bills, plans, and recurring costs</span>
             </div>
             <div className="stat">
-              <span className="stat-label">Net monthly flow</span>
-              <span className="stat-value">
-                {netPrefix}
-                {formatCurrency(Math.abs(summary.net))}
-              </span>
-              <span className="helper-text">Income minus commitments</span>
+              <span className="stat-label">Set aside for savings</span>
+              <span className="stat-value">{formatCurrency(monthlySavings)}</span>
+              <span className="stat-note">What you’re tucking away every month</span>
             </div>
             <div className="stat">
-              <span className="stat-label">Tracked items</span>
-              <span className="stat-value">{summary.totalTransactions}</span>
-              <span className="helper-text">
-                Heaviest category: {summary.topCategory.name}{' '}
-                {summary.topCategory.total > 0
-                  ? `(${formatCurrency(summary.topCategory.total)}/mo)`
-                  : ''}
-              </span>
+              <span className="stat-label">{netLabel}</span>
+              <span className="stat-value">{formatCurrency(net)}</span>
+              <span className="stat-note">{netNote}</span>
             </div>
           </div>
         </section>
@@ -593,6 +600,38 @@ export default function App() {
             formatCurrency={formatCurrency}
           />
         ))}
+      </section>
+
+      <section className="yearly-section">
+        <div className="yearly-card">
+          <div className="yearly-header">
+            <h2>Yearly breakdown</h2>
+            <p>
+              See how this month scales across the year. These totals will sync to your account once
+              Google sign-in and the database land.
+            </p>
+          </div>
+          <div className="yearly-grid">
+            <div className="yearly-stat">
+              <span className="yearly-label">Yearly income</span>
+              <span className="yearly-value">{formatCurrency(yearlyOutlook.income)}</span>
+            </div>
+            <div className="yearly-stat">
+              <span className="yearly-label">Yearly bills & plans</span>
+              <span className="yearly-value">{formatCurrency(yearlyOutlook.commitments)}</span>
+            </div>
+            <div className="yearly-stat">
+              <span className="yearly-label">Saved across the year</span>
+              <span className="yearly-value">{formatCurrency(yearlyOutlook.savings)}</span>
+            </div>
+            <div className="yearly-stat">
+              <span className="yearly-label">
+                {yearlyOutlook.net >= 0 ? 'Estimated cushion' : 'Projected shortfall'}
+              </span>
+              <span className="yearly-value">{formatCurrency(yearlyOutlook.net)}</span>
+            </div>
+          </div>
+        </div>
       </section>
 
       {dragState ? (

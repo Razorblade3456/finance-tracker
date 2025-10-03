@@ -1,5 +1,5 @@
 import { DragEvent as ReactDragEvent, useMemo, useState } from 'react';
-import { Category, CategoryKey, PinNote, Transaction, TransactionCadence } from './types';
+import { Category, CategoryKey, Transaction, TransactionCadence } from './types';
 import { CategoryColumn } from './components/CategoryColumn';
 import { TransactionForm } from './components/TransactionForm';
 import { InsightList } from './components/InsightList';
@@ -149,27 +149,6 @@ const initialCategories: Category[] = [
 
 const pinAccentPalette = ['#f472b6', '#22d3ee', '#34d399', '#facc15', '#c084fc'];
 
-const initialPinNotes: PinNote[] = [
-  {
-    id: 'pin-delivery',
-    label: 'Late-night delivery spending',
-    detail: 'Swap two orders for homemade dinners and pocket about $80 each month.',
-    accent: pinAccentPalette[0]
-  },
-  {
-    id: 'pin-coffee',
-    label: 'Daily coffee runs',
-    detail: 'Keep café stops to three times a week and transfer the savings on Fridays.',
-    accent: pinAccentPalette[1]
-  },
-  {
-    id: 'pin-vapes',
-    label: 'Vape + convenience store drops',
-    detail: 'Track each visit and cap it at $60 so the rest feeds your travel pot.',
-    accent: pinAccentPalette[2]
-  }
-];
-
 export default function App() {
   const [categories, setCategories] = useState<Category[]>(initialCategories);
   const [dragState, setDragState] = useState<{
@@ -178,9 +157,7 @@ export default function App() {
   } | null>(null);
   const [dropCategoryId, setDropCategoryId] = useState<CategoryKey | null>(null);
   const [isTrashHovered, setIsTrashHovered] = useState(false);
-  const [pins, setPins] = useState<PinNote[]>(initialPinNotes);
-  const [newPinLabel, setNewPinLabel] = useState('');
-  const [newPinDetail, setNewPinDetail] = useState('');
+  const [pinnedTransactionIds, setPinnedTransactionIds] = useState<string[]>([]);
 
   const formatter = useMemo(
     () =>
@@ -197,6 +174,11 @@ export default function App() {
     const sign = value < 0 ? '-' : '';
     return `${sign}${formatter.format(Math.abs(value))}`;
   };
+
+  const pinnedTransactionSet = useMemo(
+    () => new Set(pinnedTransactionIds),
+    [pinnedTransactionIds]
+  );
 
   const categoryMonthlyTotals = useMemo(() => {
     const totals: Record<CategoryKey, number> = {
@@ -298,34 +280,12 @@ export default function App() {
     );
   };
 
-  const handleAddPin = () => {
-    const label = newPinLabel.trim();
-    const detail = newPinDetail.trim();
-
-    if (!label) {
-      return;
-    }
-
-    setPins((current) => {
-      const accent = pinAccentPalette[current.length % pinAccentPalette.length];
-
-      return [
-        ...current,
-        {
-          id: generateId(),
-          label,
-          detail,
-          accent
-        }
-      ];
-    });
-
-    setNewPinLabel('');
-    setNewPinDetail('');
-  };
-
-  const handleRemovePin = (pinId: string) => {
-    setPins((current) => current.filter((pin) => pin.id !== pinId));
+  const togglePinnedTransaction = (transactionId: string) => {
+    setPinnedTransactionIds((current) =>
+      current.includes(transactionId)
+        ? current.filter((id) => id !== transactionId)
+        : [...current, transactionId]
+    );
   };
 
   const moveTransaction = (fromCategory: CategoryKey, toCategory: CategoryKey, transactionId: string) => {
@@ -542,6 +502,51 @@ export default function App() {
     monthlyIncome
   ]);
 
+  const pinnedSummary = useMemo(() => {
+    type PinnedItem = {
+      id: string;
+      name: string;
+      categoryName: string;
+      value: number;
+      accent: string;
+    };
+
+    if (!pinnedTransactionIds.length) {
+      return { items: [] as PinnedItem[], total: 0 };
+    }
+
+    const set = new Set(pinnedTransactionIds);
+    const collected: Omit<PinnedItem, 'accent'>[] = [];
+
+    categories.forEach((category) => {
+      category.transactions.forEach((transaction) => {
+        if (set.has(transaction.id)) {
+          const normalized = Math.abs(
+            transaction.amount * cadenceToMonthlyFactor[transaction.cadence]
+          );
+
+          collected.push({
+            id: transaction.id,
+            name: transaction.label,
+            categoryName: category.name,
+            value: normalized
+          });
+        }
+      });
+    });
+
+    const sorted = collected.sort((a, b) => b.value - a.value);
+
+    const items: PinnedItem[] = sorted.map((item, index) => ({
+      ...item,
+      accent: pinAccentPalette[index % pinAccentPalette.length]
+    }));
+
+    const total = items.reduce((sum, item) => sum + item.value, 0);
+
+    return { items, total };
+  }, [categories, pinnedTransactionIds]);
+
   return (
     <div className="app-shell">
       <header className="header">
@@ -560,8 +565,8 @@ export default function App() {
             <div className="summary-header">
               <h2>At a glance</h2>
               <p>
-                Quick math on where your money sits each month plus a space to pin habits you want
-                to watch.
+                Quick math on where your money sits each month. Pin tricky spending right from the
+                categories below when you want to keep an eye on it.
               </p>
             </div>
             <div className="summary-grid">
@@ -584,85 +589,6 @@ export default function App() {
                 <span className="stat-label">{netLabel}</span>
                 <span className="stat-value">{formatCurrency(net)}</span>
                 <span className="stat-note">{netNote}</span>
-              </div>
-            </div>
-
-            <div className="summary-pinboard">
-              <div className="summary-pinboard__intro">
-                <div>
-                  <span className="summary-pinboard__kicker">Pinned reminders</span>
-                  <h3>Keep the habits you’re trimming front and center</h3>
-                </div>
-                <p>
-                  Add quick pins for spending to watch so they stay with your core numbers. Drag and
-                  drop will arrive with the upcoming account sync.
-                </p>
-              </div>
-              <form
-                className="summary-pinboard__form"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  handleAddPin();
-                }}
-              >
-                <label htmlFor="new-pin" className="summary-pinboard__label">
-                  What do you want to watch?
-                </label>
-                <div className="summary-pinboard__inputs">
-                  <input
-                    id="new-pin"
-                    name="new-pin"
-                    value={newPinLabel}
-                    onChange={(event) => setNewPinLabel(event.target.value)}
-                    placeholder="Example: Late-night delivery"
-                    autoComplete="off"
-                  />
-                  <input
-                    id="new-pin-detail"
-                    name="new-pin-detail"
-                    value={newPinDetail}
-                    onChange={(event) => setNewPinDetail(event.target.value)}
-                    placeholder="Add a quick note (optional)"
-                    autoComplete="off"
-                  />
-                  <button type="submit">Pin it</button>
-                </div>
-              </form>
-
-              <div className="summary-pinboard__list" aria-live="polite">
-                {pins.length === 0 ? (
-                  <div className="summary-pinboard__empty">No pins yet — add one above to start.</div>
-                ) : (
-                  <ul>
-                    {pins.map((pin) => (
-                      <li key={pin.id} className="summary-pinboard__item">
-                        <span
-                          className="summary-pinboard__swatch"
-                          aria-hidden="true"
-                          style={{ background: pin.accent }}
-                        />
-                        <div className="summary-pinboard__text">
-                          <span className="summary-pinboard__title">{pin.label}</span>
-                          {pin.detail ? (
-                            <span className="summary-pinboard__detail">{pin.detail}</span>
-                          ) : (
-                            <span className="summary-pinboard__detail summary-pinboard__detail--muted">
-                              Add a detail any time.
-                            </span>
-                          )}
-                        </div>
-                        <button
-                          type="button"
-                          className="summary-pinboard__remove"
-                          onClick={() => handleRemovePin(pin.id)}
-                          aria-label={`Remove pin ${pin.label}`}
-                        >
-                          Remove
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
               </div>
             </div>
         </section>
@@ -739,8 +665,74 @@ export default function App() {
             isDropTarget={dropCategoryId === category.id}
             isDragging={Boolean(dragState)}
             formatCurrency={formatCurrency}
+            onTogglePin={togglePinnedTransaction}
+            pinnedTransactionIds={pinnedTransactionSet}
           />
         ))}
+      </section>
+
+      <section className="pinned-section">
+        <div className="pinned-card">
+          <div className="pinned-header">
+            <h2>Pinned transactions</h2>
+            <p>
+              Hover a transaction above and tap the pin to watch it here. We’ll keep these synced
+              once sign-in and the database ship.
+            </p>
+          </div>
+
+          {pinnedSummary.items.length ? (
+            <>
+              <div
+                className="pinned-bar"
+                role="list"
+                aria-label="Pinned transaction totals"
+              >
+                {pinnedSummary.items.map((item) => {
+                  const percentage = pinnedSummary.total
+                    ? (item.value / pinnedSummary.total) * 100
+                    : 0;
+
+                  return (
+                    <div
+                      key={item.id}
+                      className="pinned-bar__segment"
+                      style={{ width: `${percentage}%`, background: item.accent }}
+                      title={`${item.name} • ${formatCurrency(item.value)} per month`}
+                      role="listitem"
+                      tabIndex={0}
+                      aria-label={`${item.name} from ${item.categoryName} worth ${formatCurrency(
+                        item.value
+                      )} per month`}
+                    >
+                      <span className="pinned-bar__tooltip">
+                        <strong>{item.name}</strong>
+                        <span>{formatCurrency(item.value)} / month</span>
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <InsightList
+                data={pinnedSummary.items.map((item) => ({
+                  id: item.id,
+                  name: `${item.name} • ${item.categoryName}`,
+                  value: item.value,
+                  accent: item.accent
+                }))}
+                total={pinnedSummary.total}
+                formatCurrency={formatCurrency}
+                ariaLabel="Pinned transactions list"
+                emptyMessage="Pin transactions above to keep them in view."
+              />
+            </>
+          ) : (
+            <div className="pinned-empty" role="status">
+              Pin any transaction from the categories above to track it here.
+            </div>
+          )}
+        </div>
       </section>
 
       <section className="yearly-section">

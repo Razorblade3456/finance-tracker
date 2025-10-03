@@ -1,4 +1,4 @@
-import { DragEvent } from 'react';
+import { DragEvent, MouseEvent } from 'react';
 import { Category, CategoryKey, Transaction } from '../types';
 
 interface CategoryColumnProps {
@@ -11,6 +11,8 @@ interface CategoryColumnProps {
   isDropTarget: boolean;
   isDragging: boolean;
   formatCurrency: (value: number) => string;
+  onTogglePin: (transactionId: string) => void;
+  pinnedTransactionIds: Set<string>;
 }
 
 export function CategoryColumn({
@@ -22,7 +24,9 @@ export function CategoryColumn({
   onDragOver,
   isDropTarget,
   isDragging,
-  formatCurrency
+  formatCurrency,
+  onTogglePin,
+  pinnedTransactionIds
 }: CategoryColumnProps) {
   const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
     if (!isDragging) {
@@ -39,6 +43,7 @@ export function CategoryColumn({
   };
 
   const renderTransaction = (transaction: Transaction) => {
+    const isPinned = pinnedTransactionIds.has(transaction.id);
     const amountClass = `transaction-amount ${transaction.flow.toLowerCase()}`;
     const amountPrefix = transaction.flow === 'Expense' ? '-' : '+';
     const displayAmount = `${amountPrefix}${formatCurrency(transaction.amount)}`;
@@ -52,14 +57,30 @@ export function CategoryColumn({
       onDragStart(category.id, transactionId);
     };
 
+    const handlePinClick = (event: MouseEvent<HTMLButtonElement>) => {
+      event.stopPropagation();
+      event.preventDefault();
+      onTogglePin(transaction.id);
+    };
+
     return (
       <div
         key={transaction.id}
-        className="transaction-card"
+        className={`transaction-card ${isPinned ? 'transaction-card--pinned' : ''}`}
         draggable
         onDragStart={(event) => handleTransactionDragStart(event, transaction.id)}
         onDragEnd={onDragEnd}
       >
+        <button
+          type="button"
+          className={`transaction-pin ${isPinned ? 'is-pinned' : ''}`}
+          onClick={handlePinClick}
+          onMouseDown={(event) => event.stopPropagation()}
+          aria-pressed={isPinned}
+          aria-label={`${isPinned ? 'Unpin' : 'Pin'} ${transaction.label}`}
+        >
+          📌
+        </button>
         <div className="transaction-info">
           <span className="transaction-label">{transaction.label}</span>
           <span className="transaction-meta">

@@ -34,9 +34,3 @@ export interface Category {
   transactions: Transaction[];
 }
 
-export interface PinNote {
-  id: string;
-  label: string;
-  detail: string;
-  accent: string;
-}

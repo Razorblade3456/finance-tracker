@@ -2,7 +2,7 @@ import { DragEvent as ReactDragEvent, useEffect, useMemo, useState } from 'react
 import { Category, CategoryKey, Transaction, TransactionCadence } from './types';
 import { CategoryColumn } from './components/CategoryColumn';
 import { TransactionForm } from './components/TransactionForm';
-import { CategoryPieChart } from './components/CategoryPieChart';
+import { CategoryBarChart } from './components/CategoryBarChart';
 
 const cadenceToMonthlyFactor: Record<TransactionCadence, number> = {
   Weekly: 4,
@@ -155,14 +155,6 @@ export default function App() {
   } | null>(null);
   const [dropCategoryId, setDropCategoryId] = useState<CategoryKey | null>(null);
   const [isTrashHovered, setIsTrashHovered] = useState(false);
-
-  useEffect(() => {
-    if (typeof document === 'undefined') {
-      return;
-    }
-
-    };
-  }, [dragState]);
 
   const formatter = useMemo(
     () =>
@@ -393,21 +385,92 @@ export default function App() {
   };
 
   const netPrefix = summary.net >= 0 ? '+' : '-';
+  const { monthlyCommitments, monthlySavings, monthlyIncome } = summary;
 
-  const pieData = useMemo(() => {
-    const slices = categories
-      .filter((category) => categoryMonthlyTotals[category.id] > 0)
+  const insights = useMemo(() => {
+    type InsightBar = { id: string; name: string; value: number; accent: string };
+
+    const spendingBars: InsightBar[] = categories
+      .filter((category) => category.id !== 'income')
       .map((category) => ({
         id: category.id,
         name: category.name,
         value: categoryMonthlyTotals[category.id],
         accent: category.accent
-      }));
+      }))
+      .filter((bar) => bar.value > 0);
 
-    const total = slices.reduce((sum, slice) => sum + slice.value, 0);
+    const spendingTotal = spendingBars.reduce((sum, bar) => sum + bar.value, 0);
 
-    return { slices, total };
-  }, [categories, categoryMonthlyTotals]);
+    const livingCosts = Math.max(monthlyCommitments - monthlySavings, 0);
+    const savings = Math.max(monthlySavings, 0);
+    const net = monthlyIncome - monthlyCommitments;
+    const available = net > 0 ? net : 0;
+    const overBudget = net < 0 ? Math.abs(net) : 0;
+
+    const allocationBars: InsightBar[] = [];
+
+    if (livingCosts > 0) {
+      allocationBars.push({
+        id: 'living-costs',
+        name: 'Living costs & essentials',
+        value: livingCosts,
+        accent: '#60a5fa'
+      });
+    }
+
+    if (savings > 0) {
+      allocationBars.push({
+        id: 'savings',
+        name: 'Savings & investments',
+        value: savings,
+        accent: '#22d3ee'
+      });
+    }
+
+    if (available > 0) {
+      allocationBars.push({
+        id: 'available',
+        name: 'Available to assign',
+        value: available,
+        accent: '#34d399'
+      });
+    }
+
+    if (overBudget > 0) {
+      allocationBars.push({
+        id: 'over-budget',
+        name: 'Over budget',
+        value: overBudget,
+        accent: '#f472b6'
+      });
+    }
+
+    const allocationTotal = allocationBars.reduce((sum, bar) => sum + bar.value, 0);
+    const hasAvailable = available > 0;
+
+    return {
+      spending: {
+        bars: spendingBars,
+        total: spendingTotal
+      },
+      allocation: {
+        bars: allocationBars,
+        total: allocationTotal,
+        summaryLabel: hasAvailable ? 'Budget allocation' : 'Budget pressure',
+        summaryHelper: hasAvailable
+          ? 'How your income covers this month’s plan'
+          : 'Where commitments exceed income',
+        summaryValue: monthlyIncome > 0 ? monthlyIncome : allocationTotal
+      }
+    };
+  }, [
+    categories,
+    categoryMonthlyTotals,
+    monthlyCommitments,
+    monthlySavings,
+    monthlyIncome
+  ]);
 
   return (
     <div className="app-shell">
@@ -461,6 +524,57 @@ export default function App() {
           onAddTransaction={handleAddTransaction}
         />
       </main>
+
+      <section className="insights-section">
+        <div className="insights-grid">
+          <article className="insight-card insight-card--spending">
+            <div className="insight-header">
+              <span className="insight-kicker">Spending palette</span>
+              <h2>Explore commitments by category</h2>
+              <p>
+                Hover or focus the bars to surface the category totals that shape your monthly
+                commitments.
+              </p>
+            </div>
+            <CategoryBarChart
+              data={insights.spending.bars}
+              total={insights.spending.total}
+              formatCurrency={formatCurrency}
+              summaryLabel="Monthly commitments"
+              summaryHelper="Across all tracked spending categories"
+              activeSummaryHelper={(bar) =>
+                `${bar.percentage.toFixed(1)}% of monthly commitments`
+              }
+              ariaLabel="Monthly commitments by category"
+              emptyMessage="Add expenses to visualize your commitments."
+            />
+          </article>
+
+          <article className="insight-card insight-card--allocation">
+            <div className="insight-header">
+              <span className="insight-kicker">Budget pulse</span>
+              <h2>Follow where the next dollar goes</h2>
+              <p>
+                Compare how income supports living costs, savings goals, and any over-budget
+                pressure.
+              </p>
+            </div>
+            <CategoryBarChart
+              data={insights.allocation.bars}
+              total={insights.allocation.total}
+              formatCurrency={formatCurrency}
+              summaryLabel={insights.allocation.summaryLabel}
+              summaryHelper={insights.allocation.summaryHelper}
+              summaryValue={insights.allocation.summaryValue}
+              activeSummaryHelper={(bar) =>
+                `${bar.percentage.toFixed(1)}% of your monthly income`
+              }
+              ariaLabel="Monthly budget allocation"
+              emptyMessage="Track income and commitments to see your allocation."
+            />
+          </article>
+        </div>
+      </section>
 
       <section className="layout-columns">
         {categories.map((category) => (

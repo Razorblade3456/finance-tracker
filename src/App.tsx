@@ -1,4 +1,4 @@
-import { DragEvent as ReactDragEvent, useCallback, useMemo, useState } from 'react';
+import { DragEvent as ReactDragEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { Category, CategoryKey, Transaction, TransactionCadence } from './types';
 import { CategoryColumn } from './components/CategoryColumn';
 import { TransactionForm } from './components/TransactionForm';
@@ -160,6 +160,7 @@ export default function App() {
   const [dropCategoryId, setDropCategoryId] = useState<CategoryKey | null>(null);
   const [isTrashHovered, setIsTrashHovered] = useState(false);
   const [pinnedTransactionIds, setPinnedTransactionIds] = useState<string[]>([]);
+  const [sidebarCategoryId, setSidebarCategoryId] = useState<CategoryKey | null>(null);
   const monthOptions = useMemo(
     () =>
       Array.from({ length: 12 }, (_, index) => {
@@ -332,6 +333,36 @@ export default function App() {
         : [...current, transactionId]
     );
   };
+
+  const openCategoryDetails = useCallback((categoryId: CategoryKey) => {
+    setSidebarCategoryId(categoryId);
+  }, []);
+
+  const closeCategoryDetails = useCallback(() => {
+    setSidebarCategoryId(null);
+  }, []);
+
+  useEffect(() => {
+    if (!sidebarCategoryId) {
+      document.body.style.overflow = '';
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setSidebarCategoryId(null);
+      }
+    };
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [sidebarCategoryId]);
 
   const moveTransaction = (fromCategory: CategoryKey, toCategory: CategoryKey, transactionId: string) => {
     if (fromCategory === toCategory) {
@@ -592,9 +623,44 @@ export default function App() {
     return { items, total };
   }, [categories, pinnedTransactionIds]);
 
-  const midpoint = Math.ceil(categories.length / 2);
-  const primaryCategories = categories.slice(0, midpoint);
-  const secondaryCategories = categories.slice(midpoint);
+  const filteredCategories = useMemo(() => {
+    const monthIndex = Number(selectedMonth);
+    const yearNumber = Number(selectedYear);
+
+    return categories.map((category) => {
+      const scopedTransactions = category.transactions.filter((transaction) => {
+        if (!transaction.date) {
+          return true;
+        }
+
+        const parsed = new Date(transaction.date);
+        if (Number.isNaN(parsed.getTime())) {
+          return true;
+        }
+
+        const matchesMonth = Number.isNaN(monthIndex) ? true : parsed.getMonth() === monthIndex;
+        const matchesYear = Number.isNaN(yearNumber) ? true : parsed.getFullYear() === yearNumber;
+
+        return matchesMonth && matchesYear;
+      });
+
+      return {
+        ...category,
+        transactions: scopedTransactions
+      };
+    });
+  }, [categories, selectedMonth, selectedYear]);
+
+  const midpoint = Math.ceil(filteredCategories.length / 2);
+  const primaryCategories = filteredCategories.slice(0, midpoint);
+  const secondaryCategories = filteredCategories.slice(midpoint);
+  const activeSidebarCategory = useMemo(
+    () =>
+      sidebarCategoryId
+        ? filteredCategories.find((category) => category.id === sidebarCategoryId) ?? null
+        : null,
+    [filteredCategories, sidebarCategoryId]
+  );
 
   type ExportTarget = 'monthly' | 'yearly' | 'categories' | 'insights' | 'pinned';
 
@@ -920,6 +986,7 @@ export default function App() {
                 formatCurrency={formatCurrency}
                 onTogglePin={togglePinnedTransaction}
                 pinnedTransactionIds={pinnedTransactionSet}
+                onRequestDetails={openCategoryDetails}
               />
             ))}
           </div>
@@ -939,12 +1006,105 @@ export default function App() {
                   formatCurrency={formatCurrency}
                   onTogglePin={togglePinnedTransaction}
                   pinnedTransactionIds={pinnedTransactionSet}
+                  onRequestDetails={openCategoryDetails}
                 />
               ))}
             </div>
-          ) : null}
+      ) : null}
+    </div>
+  </section>
+
+      {activeSidebarCategory ? (
+        <div
+          className="category-sidebar-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={`category-sidebar-title-${activeSidebarCategory.id}`}
+          onClick={closeCategoryDetails}
+        >
+          <aside
+            className="category-sidebar"
+            onClick={(event) => event.stopPropagation()}
+            style={{
+              background: `linear-gradient(160deg, ${activeSidebarCategory.accent}22, ${activeSidebarCategory.accent}40), linear-gradient(160deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.82))`
+            }}
+          >
+            <header className="category-sidebar__header">
+              <div>
+                <span className="category-sidebar__eyebrow">{monthLabel} {selectedYear}</span>
+                <h3 id={`category-sidebar-title-${activeSidebarCategory.id}`}>
+                  {activeSidebarCategory.name}
+                </h3>
+                <p className="category-sidebar__subhead">
+                  All transactions captured for this month.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="category-sidebar__close"
+                onClick={closeCategoryDetails}
+                aria-label="Close transaction details"
+              >
+                ×
+              </button>
+            </header>
+            <div className="category-sidebar__content">
+              {activeSidebarCategory.transactions.length ? (
+                <div className="category-sidebar__transactions">
+                  {activeSidebarCategory.transactions.map((transaction) => {
+                    const isPinned = pinnedTransactionSet.has(transaction.id);
+                    const amountPrefix = transaction.flow === 'Expense' ? '-' : '+';
+                    const displayAmount = `${amountPrefix}${formatCurrency(transaction.amount)}`;
+                    const amountClass = `transaction-amount ${transaction.flow.toLowerCase()}`;
+                    const metaParts: string[] = [transaction.flow, transaction.cadence];
+                    const formattedDate = formatDate(transaction.date);
+
+                    if (formattedDate) {
+                      metaParts.push(formattedDate);
+                    }
+
+                    return (
+                      <div
+                        key={transaction.id}
+                        className={`transaction-card transaction-card--static ${
+                          isPinned ? 'transaction-card--pinned' : ''
+                        }`}
+                      >
+                        <button
+                          type="button"
+                          className={`transaction-pin ${isPinned ? 'is-pinned' : ''}`}
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            togglePinnedTransaction(transaction.id);
+                          }}
+                          onMouseDown={(event) => event.stopPropagation()}
+                          aria-pressed={isPinned}
+                          aria-label={`${isPinned ? 'Unpin' : 'Pin'} ${transaction.label}`}
+                        >
+                          📌
+                        </button>
+                        <div className="transaction-info">
+                          <span className="transaction-label">{transaction.label}</span>
+                          <span className="transaction-meta">{metaParts.join(' • ')}</span>
+                          {transaction.note ? (
+                            <span className="transaction-meta">{transaction.note}</span>
+                          ) : null}
+                        </div>
+                        <span className={amountClass}>{displayAmount}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="category-sidebar__empty">
+                  No transactions recorded for this month yet. Add one to see it here instantly.
+                </div>
+              )}
+            </div>
+          </aside>
         </div>
-      </section>
+      ) : null}
 
       <section className="section-block pinned-section">
         <div className="pinned-card">

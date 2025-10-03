@@ -19,6 +19,7 @@ interface CategoryColumnProps {
   formatCurrency: (value: number) => string;
   onTogglePin: (transactionId: string) => void;
   pinnedTransactionIds: Set<string>;
+  onRequestDetails: (categoryId: CategoryKey) => void;
 }
 
 export function CategoryColumn({
@@ -32,8 +33,12 @@ export function CategoryColumn({
   isDragging,
   formatCurrency,
   onTogglePin,
-  pinnedTransactionIds
+  pinnedTransactionIds,
+  onRequestDetails
 }: CategoryColumnProps) {
+  const visibleTransactions = category.transactions.slice(0, 5);
+  const hasMoreTransactions = category.transactions.length > visibleTransactions.length;
+
   const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
     if (!isDragging) {
       return;
@@ -140,7 +145,18 @@ export function CategoryColumn({
 
       <div className="transaction-list" onDragOver={handleDragOver} onDrop={handleDrop}>
         {category.transactions.length > 0 ? (
-          category.transactions.map(renderTransaction)
+          <>
+            {visibleTransactions.map(renderTransaction)}
+            {hasMoreTransactions ? (
+              <button
+                type="button"
+                className="category-see-more"
+                onClick={() => onRequestDetails(category.id)}
+              >
+                See all {category.transactions.length} transactions
+              </button>
+            ) : null}
+          </>
         ) : (
           <div className="empty-state">No items yet – start by adding one below.</div>
         )}

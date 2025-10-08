@@ -267,13 +267,14 @@ a {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
-  align-items: center;
+  align-items: flex-end;
 }
 
 .control-group {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+  align-items: flex-start;
 }
 
 .control-label {
@@ -283,11 +284,52 @@ a {
   color: #64748b;
 }
 
-.control-select {
-  min-width: 140px;
-  background: rgba(255, 255, 255, 0.92);
+.control-select-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-width: 160px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(209, 233, 255, 0.9));
   border: 1px solid rgba(148, 163, 184, 0.35);
-  box-shadow: 0 12px 24px -18px rgba(148, 163, 184, 0.35);
+  box-shadow: 0 14px 32px -22px rgba(15, 23, 42, 0.32);
+  transition: box-shadow var(--transition-snappy), border-color var(--transition-snappy),
+    transform var(--transition-snappy);
+}
+
+.control-select-wrapper:focus-within {
+  border-color: rgba(59, 130, 246, 0.45);
+  box-shadow: 0 20px 40px -26px rgba(15, 23, 42, 0.4);
+  transform: translateY(-1px);
+}
+
+.control-select {
+  appearance: none;
+  background: transparent;
+  border: none;
+  padding: 0.55rem 2.4rem 0.55rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #0f172a;
+  width: 100%;
+  cursor: pointer;
+}
+
+.control-select:focus-visible {
+  outline: none;
+}
+
+.control-select-icon {
+  position: absolute;
+  right: 0.95rem;
+  font-size: 0.85rem;
+  color: rgba(71, 85, 105, 0.7);
+  pointer-events: none;
+  transform: translateY(1px);
+}
+
+.summary-controls > * {
+  flex-shrink: 0;
 }
 
 .export-button {
@@ -342,14 +384,15 @@ a {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.45rem 0.9rem;
+  padding: 0.55rem 1.1rem;
   border-radius: 999px;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(222, 231, 255, 0.8));
   border: 1px solid rgba(148, 163, 184, 0.25);
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   font-weight: 600;
   color: #1e293b;
-  min-height: 2.2rem;
+  min-height: 2.6rem;
+  padding-inline: clamp(0.9rem, 2vw, 1.1rem);
 }
 
 @media (min-width: 768px) {
@@ -375,6 +418,7 @@ a {
 
   .summary-controls {
     justify-content: flex-end;
+    gap: 1rem;
   }
 }
 
@@ -516,7 +560,7 @@ a {
 @media (min-width: 768px) {
   .yearly-header {
     flex-direction: row;
-    align-items: flex-start;
+    align-items: flex-end;
     justify-content: space-between;
   }
 

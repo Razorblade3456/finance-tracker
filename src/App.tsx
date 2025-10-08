@@ -850,18 +850,23 @@ export default function App() {
             <div className="summary-controls">
               <label className="control-group" htmlFor="summary-month">
                 <span className="control-label">Month</span>
-                <select
-                  id="summary-month"
-                  className="control-select"
-                  value={selectedMonth}
-                  onChange={(event) => setSelectedMonth(event.target.value)}
-                >
-                  {monthOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+                <span className="control-select-wrapper">
+                  <select
+                    id="summary-month"
+                    className="control-select"
+                    value={selectedMonth}
+                    onChange={(event) => setSelectedMonth(event.target.value)}
+                  >
+                    {monthOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <span aria-hidden="true" className="control-select-icon">
+                    ▾
+                  </span>
+                </span>
               </label>
               <span className="summary-pill">{monthLabel} {selectedYear}</span>
               <DownloadButton
@@ -1214,18 +1219,23 @@ export default function App() {
             </div>
             <label className="control-group" htmlFor="yearly-year">
               <span className="control-label">Year</span>
-              <select
-                id="yearly-year"
-                className="control-select"
-                value={selectedYear}
-                onChange={(event) => setSelectedYear(event.target.value)}
-              >
-                {yearOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
+              <span className="control-select-wrapper">
+                <select
+                  id="yearly-year"
+                  className="control-select"
+                  value={selectedYear}
+                  onChange={(event) => setSelectedYear(event.target.value)}
+                >
+                  {yearOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+                <span aria-hidden="true" className="control-select-icon">
+                  ▾
+                </span>
+              </span>
             </label>
             <DownloadButton
               label="Download year (.csv)"

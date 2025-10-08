@@ -1,6 +1,7 @@
 import {
   ChangeEvent,
   DragEvent as ReactDragEvent,
+  FocusEvent,
   MouseEvent as ReactMouseEvent,
   useCallback,
   useEffect,
@@ -1205,6 +1206,41 @@ export default function App() {
   }, [selectedMonth, selectedYear]);
 
   const [isHeaderStuck, setIsHeaderStuck] = useState(false);
+  const [isHeaderNavEngaged, setIsHeaderNavEngaged] = useState(false);
+  const navInteractionTimeoutRef = useRef<number | null>(null);
+
+  const clearNavInteractionTimeout = useCallback(() => {
+    if (navInteractionTimeoutRef.current !== null) {
+      if (typeof window !== 'undefined') {
+        window.clearTimeout(navInteractionTimeoutRef.current);
+      } else {
+        clearTimeout(navInteractionTimeoutRef.current);
+      }
+      navInteractionTimeoutRef.current = null;
+    }
+  }, []);
+
+  const engageHeaderNav = useCallback(() => {
+    clearNavInteractionTimeout();
+    setIsHeaderNavEngaged(true);
+  }, [clearNavInteractionTimeout]);
+
+  const releaseHeaderNav = useCallback(
+    (delay = 160) => {
+      clearNavInteractionTimeout();
+
+      if (typeof window === 'undefined') {
+        setIsHeaderNavEngaged(false);
+        return;
+      }
+
+      navInteractionTimeoutRef.current = window.setTimeout(() => {
+        setIsHeaderNavEngaged(false);
+        navInteractionTimeoutRef.current = null;
+      }, delay);
+    },
+    [clearNavInteractionTimeout]
+  );
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -1224,9 +1260,67 @@ export default function App() {
     };
   }, []);
 
+  useEffect(
+    () => () => {
+      clearNavInteractionTimeout();
+    },
+    [clearNavInteractionTimeout]
+  );
+
+  const handleHeaderNavFocus = useCallback(() => {
+    engageHeaderNav();
+  }, [engageHeaderNav]);
+
+  const handleHeaderNavBlur = useCallback(
+    (event: FocusEvent<HTMLDivElement>) => {
+      if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+        releaseHeaderNav();
+      }
+    },
+    [releaseHeaderNav]
+  );
+
+  const handleHeaderNavMouseEnter = useCallback(() => {
+    engageHeaderNav();
+  }, [engageHeaderNav]);
+
+  const handleHeaderNavMouseLeave = useCallback(() => {
+    releaseHeaderNav();
+  }, [releaseHeaderNav]);
+
+  const handleHeaderNavTouchStart = useCallback(() => {
+    engageHeaderNav();
+  }, [engageHeaderNav]);
+
+  const handleHeaderNavTouchEnd = useCallback(() => {
+    releaseHeaderNav(320);
+  }, [releaseHeaderNav]);
+
+  const headerBarClasses = useMemo(() => {
+    const classes = ['header-bar'];
+    if (isHeaderStuck) {
+      classes.push('header-bar--stuck');
+
+      if (isHeaderNavEngaged) {
+        classes.push('header-bar--active');
+      }
+    }
+
+    return classes.join(' ');
+  }, [isHeaderNavEngaged, isHeaderStuck]);
+
   return (
     <div className="app-shell">
-      <div className={`header-bar ${isHeaderStuck ? 'header-bar--stuck' : ''}`}>
+      <div
+        className={headerBarClasses}
+        aria-hidden={!isHeaderStuck}
+        onMouseEnter={handleHeaderNavMouseEnter}
+        onMouseLeave={handleHeaderNavMouseLeave}
+        onFocus={handleHeaderNavFocus}
+        onBlur={handleHeaderNavBlur}
+        onTouchStart={handleHeaderNavTouchStart}
+        onTouchEnd={handleHeaderNavTouchEnd}
+      >
         <div className="header-bar__inner">
           <nav className="header-nav" aria-label="Primary">
             <ul className="header-nav__list">

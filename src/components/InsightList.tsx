@@ -5,6 +5,7 @@ type InsightDatum = {
   name: string;
   value: number;
   accent: string;
+  monthlyValue?: number;
 };
 
 interface InsightListProps {

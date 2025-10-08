@@ -58,7 +58,7 @@ const sortTransactionsByRecency = (transactions: Transaction[]) =>
 
 const themeStorageKey = 'flow-ledger-theme';
 
-const BUDGET_TIMEFRAME_MAX_MONTHS = 24;
+const INSIGHT_TIMEFRAME_MAX_MONTHS = 24;
 
 const baseCategories: Category[] = [
   {
@@ -248,7 +248,13 @@ export default function App() {
   }, []);
   const [selectedYear, setSelectedYear] = useState(() => String(new Date().getFullYear()));
   const [isCategoryMonthMenuOpen, setCategoryMonthMenuOpen] = useState(false);
-  const [budgetTimeframeMonths, setBudgetTimeframeMonths] = useState(3);
+  const [insightTimeframeMonths, setInsightTimeframeMonths] = useState(3);
+  const [insightTimeframeStartMonth, setInsightTimeframeStartMonth] = useState(
+    () => String(new Date().getMonth())
+  );
+  const [insightTimeframeStartYear, setInsightTimeframeStartYear] = useState(
+    () => String(new Date().getFullYear())
+  );
   const darkModeLabel = isDarkMode ? 'Switch to light mode' : 'Switch to dark mode';
 
   const formatter = useMemo(
@@ -627,31 +633,121 @@ export default function App() {
     [monthlyIncome, monthlyCommitments, monthlySavings, net]
   );
 
-  const sanitizedBudgetTimeframe = useMemo(() => {
-    if (!budgetTimeframeMonths || Number.isNaN(budgetTimeframeMonths)) {
+  const sanitizedInsightTimeframe = useMemo(() => {
+    if (!insightTimeframeMonths || Number.isNaN(insightTimeframeMonths)) {
       return 1;
     }
 
-    return Math.min(Math.max(Math.trunc(budgetTimeframeMonths), 1), BUDGET_TIMEFRAME_MAX_MONTHS);
-  }, [budgetTimeframeMonths]);
+    return Math.min(
+      Math.max(Math.trunc(insightTimeframeMonths), 1),
+      INSIGHT_TIMEFRAME_MAX_MONTHS
+    );
+  }, [insightTimeframeMonths]);
 
-  const budgetTimeframeDisplay = useMemo(() => {
-    if (sanitizedBudgetTimeframe === 1) {
+  const sanitizedTimeframeStartMonth = useMemo(() => {
+    const parsed = Number(insightTimeframeStartMonth);
+    if (Number.isNaN(parsed)) {
+      return 0;
+    }
+
+    return Math.min(Math.max(parsed, 0), 11);
+  }, [insightTimeframeStartMonth]);
+
+  const sanitizedTimeframeStartYear = useMemo(() => {
+    const parsed = Number(insightTimeframeStartYear);
+    if (Number.isNaN(parsed)) {
+      return new Date().getFullYear();
+    }
+
+    return parsed;
+  }, [insightTimeframeStartYear]);
+
+  const timeframeStartDate = useMemo(
+    () => new Date(sanitizedTimeframeStartYear, sanitizedTimeframeStartMonth, 1),
+    [sanitizedTimeframeStartMonth, sanitizedTimeframeStartYear]
+  );
+
+  const timeframeEndDate = useMemo(
+    () =>
+      new Date(
+        sanitizedTimeframeStartYear,
+        sanitizedTimeframeStartMonth + sanitizedInsightTimeframe - 1,
+        1
+      ),
+    [sanitizedInsightTimeframe, sanitizedTimeframeStartMonth, sanitizedTimeframeStartYear]
+  );
+
+  const timeframeStartLabel = useMemo(
+    () =>
+      timeframeStartDate.toLocaleString('en-US', {
+        month: 'long',
+        year: 'numeric'
+      }),
+    [timeframeStartDate]
+  );
+
+  const timeframeEndLabel = useMemo(
+    () =>
+      timeframeEndDate.toLocaleString('en-US', {
+        month: 'long',
+        year: 'numeric'
+      }),
+    [timeframeEndDate]
+  );
+
+  const timeframeRangeDisplay = useMemo(() => {
+    if (sanitizedInsightTimeframe === 1) {
+      return timeframeStartLabel;
+    }
+
+    return `${timeframeStartLabel} – ${timeframeEndLabel}`;
+  }, [sanitizedInsightTimeframe, timeframeEndLabel, timeframeStartLabel]);
+
+  const timeframeMonthsDisplay = useMemo(() => {
+    if (sanitizedInsightTimeframe === 1) {
       return '1 month';
     }
 
-    return `${sanitizedBudgetTimeframe} months`;
-  }, [sanitizedBudgetTimeframe]);
+    return `${sanitizedInsightTimeframe} months`;
+  }, [sanitizedInsightTimeframe]);
+
+  const timeframeSentence = useMemo(() => {
+    if (sanitizedInsightTimeframe === 1) {
+      return `in ${timeframeStartLabel}`;
+    }
+
+    return `from ${timeframeStartLabel} through ${timeframeEndLabel}`;
+  }, [sanitizedInsightTimeframe, timeframeEndLabel, timeframeStartLabel]);
+
+  const timeframePillLabel = useMemo(() => {
+    if (sanitizedInsightTimeframe === 1) {
+      return timeframeStartLabel;
+    }
+
+    return `${timeframeRangeDisplay} • ${timeframeMonthsDisplay}`;
+  }, [
+    sanitizedInsightTimeframe,
+    timeframeMonthsDisplay,
+    timeframeRangeDisplay,
+    timeframeStartLabel
+  ]);
 
   const insights = useMemo(() => {
-    type InsightBar = { id: string; name: string; value: number; accent: string };
+    type InsightBar = {
+      id: string;
+      name: string;
+      value: number;
+      monthlyValue: number;
+      accent: string;
+    };
 
     const spendingBars: InsightBar[] = categories
       .filter((category) => category.id !== 'income')
       .map((category) => ({
         id: category.id,
         name: category.name,
-        value: categoryMonthlyTotals[category.id],
+        monthlyValue: categoryMonthlyTotals[category.id],
+        value: categoryMonthlyTotals[category.id] * sanitizedInsightTimeframe,
         accent: category.accent
       }))
       .filter((bar) => bar.value > 0);
@@ -664,10 +760,10 @@ export default function App() {
     const availableMonthly = netMonthly > 0 ? netMonthly : 0;
     const overBudgetMonthly = netMonthly < 0 ? Math.abs(netMonthly) : 0;
 
-    const livingCosts = livingCostsMonthly * sanitizedBudgetTimeframe;
-    const savings = savingsMonthly * sanitizedBudgetTimeframe;
-    const available = availableMonthly * sanitizedBudgetTimeframe;
-    const overBudget = overBudgetMonthly * sanitizedBudgetTimeframe;
+    const livingCosts = livingCostsMonthly * sanitizedInsightTimeframe;
+    const savings = savingsMonthly * sanitizedInsightTimeframe;
+    const available = availableMonthly * sanitizedInsightTimeframe;
+    const overBudget = overBudgetMonthly * sanitizedInsightTimeframe;
 
     const allocationBars: InsightBar[] = [];
 
@@ -675,6 +771,7 @@ export default function App() {
       allocationBars.push({
         id: 'living-costs',
         name: 'Living costs & essentials',
+        monthlyValue: livingCostsMonthly,
         value: livingCosts,
         accent: '#93c5fd'
       });
@@ -684,6 +781,7 @@ export default function App() {
       allocationBars.push({
         id: 'savings',
         name: 'Savings & investments',
+        monthlyValue: savingsMonthly,
         value: savings,
         accent: '#99f6e4'
       });
@@ -693,6 +791,7 @@ export default function App() {
       allocationBars.push({
         id: 'available',
         name: 'Available to assign',
+        monthlyValue: availableMonthly,
         value: available,
         accent: '#bbf7d0'
       });
@@ -702,6 +801,7 @@ export default function App() {
       allocationBars.push({
         id: 'over-budget',
         name: 'Over budget',
+        monthlyValue: overBudgetMonthly,
         value: overBudget,
         accent: '#fbcfe8'
       });
@@ -709,14 +809,15 @@ export default function App() {
 
     const allocationTotal = allocationBars.reduce((sum, bar) => sum + bar.value, 0);
     const hasAvailable = availableMonthly > 0;
-    const timeframeSentence = sanitizedBudgetTimeframe === 1
-      ? 'this month'
-      : `the next ${sanitizedBudgetTimeframe} months`;
 
     return {
       spending: {
         bars: spendingBars,
-        total: spendingTotal
+        total: spendingTotal,
+        timeframeSentence,
+        rangeDisplay: timeframeRangeDisplay,
+        monthsDisplay: timeframeMonthsDisplay,
+        months: sanitizedInsightTimeframe
       },
       allocation: {
         bars: allocationBars,
@@ -726,10 +827,11 @@ export default function App() {
           ? `How your income covers ${timeframeSentence}.`
           : `Where commitments exceed income over ${timeframeSentence}.`,
         summaryValue:
-          monthlyIncome > 0 ? monthlyIncome * sanitizedBudgetTimeframe : allocationTotal,
-        timeframeDisplay: sanitizedBudgetTimeframe === 1 ? '1 month' : `${sanitizedBudgetTimeframe} months`,
+          monthlyIncome > 0 ? monthlyIncome * sanitizedInsightTimeframe : allocationTotal,
+        timeframeDisplay: timeframeMonthsDisplay,
         timeframeSentence,
-        timeframeMonths: sanitizedBudgetTimeframe
+        timeframeRange: timeframeRangeDisplay,
+        timeframeMonths: sanitizedInsightTimeframe
       }
     };
   }, [
@@ -738,30 +840,47 @@ export default function App() {
     monthlyCommitments,
     monthlySavings,
     monthlyIncome,
-    sanitizedBudgetTimeframe
+    sanitizedInsightTimeframe,
+    timeframeMonthsDisplay,
+    timeframeRangeDisplay,
+    timeframeSentence
   ]);
 
-  const handleBudgetTimeframeChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+  const handleInsightTimeframeChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     const nextValue = Number(event.target.value);
 
     if (Number.isNaN(nextValue)) {
-      setBudgetTimeframeMonths(1);
+      setInsightTimeframeMonths(1);
       return;
     }
 
-    const clamped = Math.min(Math.max(Math.trunc(nextValue), 1), BUDGET_TIMEFRAME_MAX_MONTHS);
-    setBudgetTimeframeMonths(clamped);
+    const clamped = Math.min(Math.max(Math.trunc(nextValue), 1), INSIGHT_TIMEFRAME_MAX_MONTHS);
+    setInsightTimeframeMonths(clamped);
   }, []);
 
-  const handleBudgetTimeframeBlur = useCallback(() => {
-    setBudgetTimeframeMonths((current) => {
+  const handleInsightTimeframeBlur = useCallback(() => {
+    setInsightTimeframeMonths((current) => {
       if (!current || Number.isNaN(current)) {
         return 1;
       }
 
-      return Math.min(Math.max(Math.trunc(current), 1), BUDGET_TIMEFRAME_MAX_MONTHS);
+      return Math.min(Math.max(Math.trunc(current), 1), INSIGHT_TIMEFRAME_MAX_MONTHS);
     });
   }, []);
+
+  const handleInsightTimeframeStartMonthChange = useCallback(
+    (event: ChangeEvent<HTMLSelectElement>) => {
+      setInsightTimeframeStartMonth(event.target.value);
+    },
+    []
+  );
+
+  const handleInsightTimeframeStartYearChange = useCallback(
+    (event: ChangeEvent<HTMLSelectElement>) => {
+      setInsightTimeframeStartYear(event.target.value);
+    },
+    []
+  );
 
   const pinnedSummary = useMemo(() => {
     type PinnedItem = {
@@ -859,7 +978,7 @@ export default function App() {
     [filteredCategories, sidebarCategoryId]
   );
 
-  type ExportTarget = 'monthly' | 'yearly';
+  type ExportTarget = 'monthly' | 'yearly' | 'commitments';
 
   const downloadCsv = useCallback((fileName: string, headers: string[], rows: (string | number)[][]) => {
     if (!rows.length) {
@@ -896,6 +1015,30 @@ export default function App() {
 
   const handleDownload = useCallback(
     (target: ExportTarget) => {
+      if (target === 'commitments') {
+        const headers = ['Category', 'Total over timeframe', 'Average per month'];
+        const rows: (string | number)[][] = insights.spending.bars.map((bar) => [
+          bar.name,
+          formatCurrency(bar.value),
+          formatCurrency(bar.monthlyValue)
+        ]);
+
+        rows.push([
+          'Total commitments',
+          formatCurrency(insights.spending.total),
+          formatCurrency(insights.spending.total / sanitizedInsightTimeframe)
+        ]);
+
+        const fileName = `commitments-${insightTimeframeStartYear}-${String(
+          sanitizedTimeframeStartMonth + 1
+        ).padStart(2, '0')}-to-${timeframeEndDate.getFullYear()}-${String(
+          timeframeEndDate.getMonth() + 1
+        ).padStart(2, '0')}.csv`;
+
+        downloadCsv(fileName, headers, rows);
+        return;
+      }
+
       if (target === 'monthly') {
         const headers = ['Metric', 'Amount', 'Notes'];
         const rows: (string | number)[][] = [
@@ -940,7 +1083,13 @@ export default function App() {
       yearlyOutlook.commitments,
       yearlyOutlook.income,
       yearlyOutlook.net,
-      yearlyOutlook.savings
+      yearlyOutlook.savings,
+      insights.spending.bars,
+      insights.spending.total,
+      sanitizedInsightTimeframe,
+      insightTimeframeStartYear,
+      sanitizedTimeframeStartMonth,
+      timeframeEndDate
     ]
   );
 
@@ -1229,12 +1378,71 @@ export default function App() {
               <span className="insight-kicker">Spending palette</span>
               <h2>Explore commitments by category</h2>
               <p>
-                Hover or focus the bars to surface the category totals that shape your monthly
-                commitments.
+                Hover or focus the bars to surface the category totals that shape your
+                commitments over the selected timeframe.
               </p>
             </div>
+            <div className="insight-controls">
+              <label className="control-group" htmlFor="commitment-timeframe-start-month">
+                <span className="control-label">Start month</span>
+                <span className="control-select-wrapper">
+                  <select
+                    id="commitment-timeframe-start-month"
+                    className="control-select"
+                    value={insightTimeframeStartMonth}
+                    onChange={handleInsightTimeframeStartMonthChange}
+                  >
+                    {monthOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </span>
+              </label>
+              <label className="control-group" htmlFor="commitment-timeframe-start-year">
+                <span className="control-label">Start year</span>
+                <span className="control-select-wrapper">
+                  <select
+                    id="commitment-timeframe-start-year"
+                    className="control-select"
+                    value={insightTimeframeStartYear}
+                    onChange={handleInsightTimeframeStartYearChange}
+                  >
+                    {yearOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </span>
+              </label>
+              <label className="control-group" htmlFor="commitment-timeframe-months">
+                <span className="control-label">Timeframe (months)</span>
+                <span className="control-input-wrapper">
+                  <input
+                    id="commitment-timeframe-months"
+                    className="control-input"
+                    type="number"
+                    min={1}
+                    max={INSIGHT_TIMEFRAME_MAX_MONTHS}
+                    value={sanitizedInsightTimeframe}
+                    onChange={handleInsightTimeframeChange}
+                    onBlur={handleInsightTimeframeBlur}
+                    aria-label="Choose how many months to include in the commitments overview"
+                  />
+                  <span className="control-input-suffix">months</span>
+                </span>
+              </label>
+              <span className="summary-pill">Viewing {timeframePillLabel}</span>
+              <DownloadButton
+                label="Download commitments (.csv)"
+                onClick={() => handleDownload('commitments')}
+                aria-label={`Download commitments from ${timeframeRangeDisplay}`}
+              />
+            </div>
             <div className="insight-summary">
-              <span className="insight-summary-label">Monthly commitments</span>
+              <span className="insight-summary-label">Commitments {timeframeSentence}</span>
               <span className="insight-summary-value">
                 {formatCurrency(insights.spending.total)}
               </span>
@@ -1243,7 +1451,7 @@ export default function App() {
               data={insights.spending.bars}
               total={insights.spending.total}
               formatCurrency={formatCurrency}
-              ariaLabel="Monthly commitments by category"
+              ariaLabel={`Commitments ${timeframeSentence} by category`}
               emptyMessage="Add expenses to visualize your commitments."
             />
           </article>
@@ -1258,24 +1466,58 @@ export default function App() {
               </p>
             </div>
             <div className="insight-controls">
-              <label className="control-group" htmlFor="budget-timeframe">
+              <label className="control-group" htmlFor="allocation-timeframe-start-month">
+                <span className="control-label">Start month</span>
+                <span className="control-select-wrapper">
+                  <select
+                    id="allocation-timeframe-start-month"
+                    className="control-select"
+                    value={insightTimeframeStartMonth}
+                    onChange={handleInsightTimeframeStartMonthChange}
+                  >
+                    {monthOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </span>
+              </label>
+              <label className="control-group" htmlFor="allocation-timeframe-start-year">
+                <span className="control-label">Start year</span>
+                <span className="control-select-wrapper">
+                  <select
+                    id="allocation-timeframe-start-year"
+                    className="control-select"
+                    value={insightTimeframeStartYear}
+                    onChange={handleInsightTimeframeStartYearChange}
+                  >
+                    {yearOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </span>
+              </label>
+              <label className="control-group" htmlFor="allocation-timeframe-months">
                 <span className="control-label">Timeframe (months)</span>
                 <span className="control-input-wrapper">
                   <input
-                    id="budget-timeframe"
+                    id="allocation-timeframe-months"
                     className="control-input"
                     type="number"
                     min={1}
-                    max={BUDGET_TIMEFRAME_MAX_MONTHS}
-                    value={sanitizedBudgetTimeframe}
-                    onChange={handleBudgetTimeframeChange}
-                    onBlur={handleBudgetTimeframeBlur}
+                    max={INSIGHT_TIMEFRAME_MAX_MONTHS}
+                    value={sanitizedInsightTimeframe}
+                    onChange={handleInsightTimeframeChange}
+                    onBlur={handleInsightTimeframeBlur}
                     aria-label="Choose how many months to include in the budget overview"
                   />
                   <span className="control-input-suffix">months</span>
                 </span>
               </label>
-              <span className="summary-pill">Viewing {budgetTimeframeDisplay}</span>
+              <span className="summary-pill">Viewing {timeframePillLabel}</span>
             </div>
             <div className="insight-summary">
               <span className="insight-summary-label">{insights.allocation.summaryLabel}</span>

@@ -1,6 +1,7 @@
 import {
   ChangeEvent,
   DragEvent as ReactDragEvent,
+  MouseEvent as ReactMouseEvent,
   useCallback,
   useEffect,
   useMemo,
@@ -256,6 +257,17 @@ export default function App() {
     () => String(new Date().getFullYear())
   );
   const darkModeLabel = isDarkMode ? 'Switch to light mode' : 'Switch to dark mode';
+  const navigationItems = useMemo(
+    () => [
+      { id: 'monthly-overview', label: 'Monthly snapshot' },
+      { id: 'log-transaction', label: 'Log a transaction' },
+      { id: 'categories-section', label: 'Categories' },
+      { id: 'pinned-transactions', label: 'Pinned reminders' },
+      { id: 'insights-section', label: 'Budget & commitments' },
+      { id: 'yearly-outlook', label: 'Yearly outlook' }
+    ],
+    []
+  );
 
   const formatter = useMemo(
     () =>
@@ -296,6 +308,26 @@ export default function App() {
   const toggleDarkMode = useCallback(() => {
     setIsDarkMode((previous) => !previous);
   }, []);
+
+  const handleNavigation = useCallback(
+    (event: ReactMouseEvent<HTMLAnchorElement>, targetId: string) => {
+      event.preventDefault();
+      const target = document.getElementById(targetId);
+
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        if (typeof target.focus === 'function') {
+          try {
+            target.focus({ preventScroll: true });
+          } catch (error) {
+            target.focus();
+          }
+        }
+      }
+    },
+    []
+  );
 
   const pinnedTransactionSet = useMemo(
     () => new Set(pinnedTransactionIds),
@@ -1195,6 +1227,21 @@ export default function App() {
             </span>
           </button>
         </div>
+        <nav className="header-nav" aria-label="Primary">
+          <ul className="header-nav__list">
+            {navigationItems.map((item) => (
+              <li key={item.id} className="header-nav__item">
+                <a
+                  href={`#${item.id}`}
+                  className="header-nav__link"
+                  onClick={(event) => handleNavigation(event, item.id)}
+                >
+                  {item.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
         <p>
           Keep your money map lightweight and beautiful today, with the structure ready to graduate
           into a native app tomorrow.
@@ -1202,7 +1249,7 @@ export default function App() {
       </header>
 
       <main className="dashboard">
-        <section className="summary-card">
+        <section id="monthly-overview" className="summary-card" tabIndex={-1}>
           <div className="summary-header">
             <div className="summary-intro">
               <h2>Monthly summary</h2>
@@ -1265,11 +1312,16 @@ export default function App() {
         </section>
 
         <TransactionForm
+          id="log-transaction"
           categories={categories.map(({ id, name }) => ({ id, name }))}
           onAddTransaction={handleAddTransaction}
         />
 
-        <section className="section-block categories-section">
+        <section
+          id="categories-section"
+          className="section-block categories-section"
+          tabIndex={-1}
+        >
           <div className="section-heading">
             <div>
               <h2>Categories & transactions</h2>
@@ -1363,13 +1415,17 @@ export default function App() {
           </div>
         </section>
 
-        <section className="section-block pinned-section">
+        <section
+          id="pinned-transactions"
+          className="section-block pinned-section"
+          tabIndex={-1}
+        >
           <div className="pinned-card">
             <div className="pinned-header">
               <div className="pinned-header__intro">
                 <h2>Pinned transactions</h2>
                 <p>
-                  Hover a transaction above and tap the pin to watch it here. We’ll keep these synced
+                  Tap the pin on any transaction above to watch it here. We’ll keep these synced
                   once sign-in and the database ship.
                 </p>
               </div>
@@ -1426,7 +1482,7 @@ export default function App() {
         </section>
       </main>
 
-      <section className="section-block insights-section">
+      <section id="insights-section" className="section-block insights-section" tabIndex={-1}>
         <div className="section-heading">
           <div>
             <h2>Insight spotlight</h2>
@@ -1731,7 +1787,7 @@ export default function App() {
         </div>
       ) : null}
 
-      <section className="section-block yearly-section">
+      <section id="yearly-outlook" className="section-block yearly-section" tabIndex={-1}>
         <div className="yearly-card">
           <div className="yearly-header">
             <div className="yearly-intro">

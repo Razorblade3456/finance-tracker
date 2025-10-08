@@ -17,6 +17,7 @@ const cadenceOptions: TransactionCadence[] = [
 const flowOptions: TransactionFlow[] = ['Expense', 'Savings', 'Income'];
 
 interface TransactionFormProps {
+  id?: string;
   categories: { id: CategoryKey; name: string }[];
   onAddTransaction: (payload: {
     categoryId: CategoryKey;
@@ -29,7 +30,7 @@ interface TransactionFormProps {
   }) => void;
 }
 
-export function TransactionForm({ categories, onAddTransaction }: TransactionFormProps) {
+export function TransactionForm({ id, categories, onAddTransaction }: TransactionFormProps) {
   const initialCategory = useMemo(() => {
     const firstNonIncome = categories.find((category) => category.id !== 'income');
     return firstNonIncome?.id ?? categories[0]?.id ?? 'financial-obligations';
@@ -85,7 +86,7 @@ export function TransactionForm({ categories, onAddTransaction }: TransactionFor
   };
 
   return (
-    <form className="form-card" onSubmit={handleSubmit}>
+    <form id={id} className="form-card" onSubmit={handleSubmit} tabIndex={-1}>
       <div>
         <h2>Log a transaction</h2>
         <p className="helper-text">

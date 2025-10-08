@@ -1,4 +1,4 @@
-import { DragEvent, MouseEvent } from 'react';
+import { CSSProperties, DragEvent, MouseEvent } from 'react';
 import { Category, CategoryKey, Transaction } from '../types';
 
 const transactionDateFormatter = new Intl.DateTimeFormat('en-US', {
@@ -20,6 +20,7 @@ interface CategoryColumnProps {
   onTogglePin: (transactionId: string) => void;
   pinnedTransactionIds: Set<string>;
   onRequestDetails: (categoryId: CategoryKey) => void;
+  isDarkMode: boolean;
 }
 
 export function CategoryColumn({
@@ -34,10 +35,29 @@ export function CategoryColumn({
   formatCurrency,
   onTogglePin,
   pinnedTransactionIds,
-  onRequestDetails
+  onRequestDetails,
+  isDarkMode
 }: CategoryColumnProps) {
   const visibleTransactions = category.transactions.slice(0, 5);
   const hasMoreTransactions = category.transactions.length > visibleTransactions.length;
+
+  const cardStyle: CSSProperties = {
+    background: isDarkMode
+      ? `linear-gradient(160deg, ${category.accent}33, ${category.accent}55), linear-gradient(160deg, rgba(15, 23, 42, 0.95), rgba(15, 23, 42, 0.85))`
+      : `linear-gradient(160deg, ${category.accent}22, ${category.accent}36), linear-gradient(160deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.72))`
+  };
+
+  const chipStyle: CSSProperties = isDarkMode
+    ? {
+        borderColor: `${category.accent}88`,
+        background: 'rgba(15, 23, 42, 0.82)',
+        color: '#f8fafc'
+      }
+    : {
+        borderColor: `${category.accent}66`,
+        background: 'rgba(255, 255, 255, 0.75)',
+        color: '#0f172a'
+      };
 
   const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
     if (!isDragging) {
@@ -113,21 +133,13 @@ export function CategoryColumn({
   };
 
   return (
-    <section
-      className={`category-card ${isDropTarget ? 'drop-target' : ''}`}
-      style={{
-        background: `linear-gradient(160deg, ${category.accent}22, ${category.accent}36), linear-gradient(160deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.72))`
-      }}
-    >
+    <section className={`category-card ${isDropTarget ? 'drop-target' : ''}`} style={cardStyle}>
       <header className="category-header">
         <div>
           <div className="category-title">{category.name}</div>
           <div className="category-total">{formatCurrency(monthlyTotal)} per month</div>
         </div>
-        <span
-          className="category-chip"
-          style={{ borderColor: `${category.accent}66`, background: 'rgba(255, 255, 255, 0.75)' }}
-        >
+        <span className="category-chip" style={chipStyle}>
           <span
             style={{
               display: 'inline-block',

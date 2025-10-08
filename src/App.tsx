@@ -55,6 +55,8 @@ const getTransactionTimestamp = (transaction: Transaction) => {
 const sortTransactionsByRecency = (transactions: Transaction[]) =>
   [...transactions].sort((a, b) => getTransactionTimestamp(b) - getTransactionTimestamp(a));
 
+const themeStorageKey = 'flow-ledger-theme';
+
 const baseCategories: Category[] = [
   {
     id: 'income',
@@ -184,7 +186,33 @@ type CategoryWithMonthlyTotal = Category & { monthlyTotal: number };
 
 const pinAccentPalette = ['#fbcfe8', '#bae6fd', '#bbf7d0', '#fde68a', '#ddd6fe'];
 
+const getInitialThemePreference = () => {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  try {
+    const storedPreference = window.localStorage.getItem(themeStorageKey);
+    if (storedPreference === 'dark') {
+      return true;
+    }
+
+    if (storedPreference === 'light') {
+      return false;
+    }
+  } catch (error) {
+    // Ignore storage access issues and fall back to system preference.
+  }
+
+  if (typeof window.matchMedia === 'function') {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  }
+
+  return false;
+};
+
 export default function App() {
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(getInitialThemePreference);
   const [categories, setCategories] = useState<Category[]>(initialCategories);
   const [dragState, setDragState] = useState<{
     transactionId: string;
@@ -217,6 +245,7 @@ export default function App() {
   }, []);
   const [selectedYear, setSelectedYear] = useState(() => String(new Date().getFullYear()));
   const [isCategoryMonthMenuOpen, setCategoryMonthMenuOpen] = useState(false);
+  const darkModeLabel = isDarkMode ? 'Switch to light mode' : 'Switch to dark mode';
 
   const formatter = useMemo(
     () =>
@@ -252,6 +281,10 @@ export default function App() {
       day: 'numeric',
       year: 'numeric'
     });
+  }, []);
+
+  const toggleDarkMode = useCallback(() => {
+    setIsDarkMode((previous) => !previous);
   }, []);
 
   const pinnedTransactionSet = useMemo(
@@ -378,6 +411,60 @@ export default function App() {
 
   const closeCategoryDetails = useCallback(() => {
     setSidebarCategoryId(null);
+  }, []);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') {
+      return;
+    }
+
+    const rootElement = document.documentElement;
+    const bodyElement = document.body;
+
+    if (isDarkMode) {
+      rootElement.classList.add('theme-dark');
+      bodyElement.classList.add('theme-dark');
+    } else {
+      rootElement.classList.remove('theme-dark');
+      bodyElement.classList.remove('theme-dark');
+    }
+  }, [isDarkMode]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    try {
+      window.localStorage.setItem(themeStorageKey, isDarkMode ? 'dark' : 'light');
+    } catch (error) {
+      // Ignore storage write failures.
+    }
+  }, [isDarkMode]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = (event: MediaQueryListEvent) => {
+      try {
+        if (window.localStorage.getItem(themeStorageKey)) {
+          return;
+        }
+      } catch (error) {
+        // Ignore storage read issues and fall back to system preference.
+      }
+
+      setIsDarkMode(event.matches);
+    };
+
+    mediaQuery.addEventListener('change', handleChange);
+
+    return () => {
+      mediaQuery.removeEventListener('change', handleChange);
+    };
   }, []);
 
   useEffect(() => {
@@ -827,9 +914,25 @@ export default function App() {
   return (
     <div className="app-shell">
       <header className="header">
-        <div className="header-title">
-          <span className="logo-badge">FL</span>
-          <h1>Flow Ledger</h1>
+        <div className="header-top">
+          <div className="header-title">
+            <span className="logo-badge">FL</span>
+            <h1>Flow Ledger</h1>
+          </div>
+          <button
+            type="button"
+            className="theme-toggle"
+            onClick={toggleDarkMode}
+            aria-pressed={isDarkMode}
+            aria-label={darkModeLabel}
+          >
+            <span className="theme-toggle__icon" aria-hidden="true">
+              {isDarkMode ? '🌙' : '🌞'}
+            </span>
+            <span className="theme-toggle__label">
+              {isDarkMode ? 'Light mode' : 'Dark mode'}
+            </span>
+          </button>
         </div>
         <p>
           Keep your money map lightweight and beautiful today, with the structure ready to graduate
@@ -966,27 +1069,29 @@ export default function App() {
                   onTogglePin={togglePinnedTransaction}
                   pinnedTransactionIds={pinnedTransactionSet}
                   onRequestDetails={openCategoryDetails}
+                  isDarkMode={isDarkMode}
                 />
               ))}
             </div>
             {secondaryCategories.length ? (
               <div className="category-layout__row category-layout__row--secondary">
                 {secondaryCategories.map((category) => (
-                  <CategoryColumn
-                    key={category.id}
-                    category={category}
-                    monthlyTotal={category.monthlyTotal}
-                    onDragStart={handleDragStart}
-                    onDragEnd={handleDragEnd}
-                    onDrop={handleDrop}
-                    onDragOver={handleDragOver}
-                    isDropTarget={dropCategoryId === category.id}
-                    isDragging={Boolean(dragState)}
-                    formatCurrency={formatCurrency}
-                    onTogglePin={togglePinnedTransaction}
-                    pinnedTransactionIds={pinnedTransactionSet}
-                    onRequestDetails={openCategoryDetails}
-                  />
+                <CategoryColumn
+                  key={category.id}
+                  category={category}
+                  monthlyTotal={category.monthlyTotal}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
+                  onDrop={handleDrop}
+                  onDragOver={handleDragOver}
+                  isDropTarget={dropCategoryId === category.id}
+                  isDragging={Boolean(dragState)}
+                  formatCurrency={formatCurrency}
+                  onTogglePin={togglePinnedTransaction}
+                  pinnedTransactionIds={pinnedTransactionSet}
+                  onRequestDetails={openCategoryDetails}
+                  isDarkMode={isDarkMode}
+                />
                 ))}
               </div>
             ) : null}
@@ -1127,7 +1232,9 @@ export default function App() {
             className="category-sidebar"
             onClick={(event) => event.stopPropagation()}
             style={{
-              background: `linear-gradient(160deg, ${activeSidebarCategory.accent}22, ${activeSidebarCategory.accent}40), linear-gradient(160deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.82))`
+              background: isDarkMode
+                ? `linear-gradient(160deg, ${activeSidebarCategory.accent}33, ${activeSidebarCategory.accent}55), linear-gradient(160deg, rgba(15, 23, 42, 0.95), rgba(15, 23, 42, 0.85))`
+                : `linear-gradient(160deg, ${activeSidebarCategory.accent}22, ${activeSidebarCategory.accent}40), linear-gradient(160deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.82))`
             }}
           >
             <header className="category-sidebar__header">

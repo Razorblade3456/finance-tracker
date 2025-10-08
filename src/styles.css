@@ -108,7 +108,9 @@ a {
 }
 
 .dashboard > .summary-card,
-.dashboard > .form-card {
+.dashboard > .form-card,
+.dashboard > .categories-section,
+.dashboard > .pinned-section {
   grid-column: 1 / -1;
 }
 
@@ -420,6 +422,14 @@ a {
 
 .categories-section {
   margin-top: clamp(1rem, 2vw, 1.5rem);
+}
+
+.pinned-section {
+  margin-top: clamp(0.5rem, 2vw, 1.25rem);
+}
+
+.pinned-section .pinned-card {
+  width: 100%;
 }
 
 .category-layout {

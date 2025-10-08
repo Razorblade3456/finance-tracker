@@ -18,6 +18,8 @@ interface CategoryColumnProps {
   isDragging: boolean;
   formatCurrency: (value: number) => string;
   onTogglePin: (transactionId: string) => void;
+  onDuplicateTransaction: (categoryId: CategoryKey, transactionId: string) => void;
+  onDeleteTransaction: (categoryId: CategoryKey, transactionId: string) => void;
   pinnedTransactionIds: Set<string>;
   onRequestDetails: (categoryId: CategoryKey) => void;
   isDarkMode: boolean;
@@ -34,6 +36,8 @@ export function CategoryColumn({
   isDragging,
   formatCurrency,
   onTogglePin,
+  onDuplicateTransaction,
+  onDeleteTransaction,
   pinnedTransactionIds,
   onRequestDetails,
   isDarkMode
@@ -102,6 +106,18 @@ export function CategoryColumn({
       onTogglePin(transaction.id);
     };
 
+    const handleDuplicateClick = (event: MouseEvent<HTMLButtonElement>) => {
+      event.stopPropagation();
+      event.preventDefault();
+      onDuplicateTransaction(category.id, transaction.id);
+    };
+
+    const handleDeleteClick = (event: MouseEvent<HTMLButtonElement>) => {
+      event.stopPropagation();
+      event.preventDefault();
+      onDeleteTransaction(category.id, transaction.id);
+    };
+
     return (
       <div
         key={transaction.id}
@@ -110,16 +126,36 @@ export function CategoryColumn({
         onDragStart={(event) => handleTransactionDragStart(event, transaction.id)}
         onDragEnd={onDragEnd}
       >
-        <button
-          type="button"
-          className={`transaction-pin ${isPinned ? 'is-pinned' : ''}`}
-          onClick={handlePinClick}
-          onMouseDown={(event) => event.stopPropagation()}
-          aria-pressed={isPinned}
-          aria-label={`${isPinned ? 'Unpin' : 'Pin'} ${transaction.label}`}
-        >
-          📌
-        </button>
+        <div className={`transaction-actions ${isPinned ? 'transaction-actions--active' : ''}`}>
+          <button
+            type="button"
+            className={`transaction-action transaction-pin ${isPinned ? 'is-pinned' : ''}`}
+            onClick={handlePinClick}
+            onMouseDown={(event) => event.stopPropagation()}
+            aria-pressed={isPinned}
+            aria-label={`${isPinned ? 'Unpin' : 'Pin'} ${transaction.label}`}
+          >
+            📌
+          </button>
+          <button
+            type="button"
+            className="transaction-action transaction-action--duplicate"
+            onClick={handleDuplicateClick}
+            onMouseDown={(event) => event.stopPropagation()}
+            aria-label={`Duplicate ${transaction.label}`}
+          >
+            ⎘
+          </button>
+          <button
+            type="button"
+            className="transaction-action transaction-action--delete"
+            onClick={handleDeleteClick}
+            onMouseDown={(event) => event.stopPropagation()}
+            aria-label={`Delete ${transaction.label}`}
+          >
+            🗑️
+          </button>
+        </div>
         <div className="transaction-info">
           <span className="transaction-label">{transaction.label}</span>
           <span className="transaction-meta">{metaParts.join(' • ')}</span>

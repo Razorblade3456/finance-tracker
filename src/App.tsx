@@ -415,6 +415,36 @@ export default function App() {
     );
   };
 
+  const duplicateTransaction = (categoryId: CategoryKey, transactionId: string) => {
+    setCategories((current) =>
+      current.map((category) => {
+        if (category.id !== categoryId) {
+          return category;
+        }
+
+        const target = category.transactions.find((transaction) => transaction.id === transactionId);
+
+        if (!target) {
+          return category;
+        }
+
+        const now = new Date();
+
+        const clonedTransaction: Transaction = {
+          ...target,
+          id: generateId(),
+          date: now.toISOString().slice(0, 10),
+          createdAt: now.toISOString()
+        };
+
+        return {
+          ...category,
+          transactions: sortTransactionsByRecency([...category.transactions, clonedTransaction])
+        };
+      })
+    );
+  };
+
   const openCategoryDetails = useCallback((categoryId: CategoryKey) => {
     setSidebarCategoryId(categoryId);
   }, []);
@@ -590,6 +620,7 @@ export default function App() {
       )
     );
 
+    setPinnedTransactionIds((current) => current.filter((id) => id !== transactionId));
     setDragState(null);
     setDropCategoryId(null);
     setIsTrashHovered(false);
@@ -1297,6 +1328,8 @@ export default function App() {
                   isDragging={Boolean(dragState)}
                   formatCurrency={formatCurrency}
                   onTogglePin={togglePinnedTransaction}
+                  onDuplicateTransaction={duplicateTransaction}
+                  onDeleteTransaction={deleteTransaction}
                   pinnedTransactionIds={pinnedTransactionSet}
                   onRequestDetails={openCategoryDetails}
                   isDarkMode={isDarkMode}
@@ -1318,6 +1351,8 @@ export default function App() {
                   isDragging={Boolean(dragState)}
                   formatCurrency={formatCurrency}
                   onTogglePin={togglePinnedTransaction}
+                  onDuplicateTransaction={duplicateTransaction}
+                  onDeleteTransaction={deleteTransaction}
                   pinnedTransactionIds={pinnedTransactionSet}
                   onRequestDetails={openCategoryDetails}
                   isDarkMode={isDarkMode}
@@ -1626,20 +1661,54 @@ export default function App() {
                           isPinned ? 'transaction-card--pinned' : ''
                         }`}
                       >
-                        <button
-                          type="button"
-                          className={`transaction-pin ${isPinned ? 'is-pinned' : ''}`}
-                          onClick={(event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            togglePinnedTransaction(transaction.id);
-                          }}
-                          onMouseDown={(event) => event.stopPropagation()}
-                          aria-pressed={isPinned}
-                          aria-label={`${isPinned ? 'Unpin' : 'Pin'} ${transaction.label}`}
+                        <div
+                          className={`transaction-actions ${
+                            isPinned ? 'transaction-actions--active' : ''
+                          }`}
                         >
-                          📌
-                        </button>
+                          <button
+                            type="button"
+                            className={`transaction-action transaction-pin ${
+                              isPinned ? 'is-pinned' : ''
+                            }`}
+                            onClick={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              togglePinnedTransaction(transaction.id);
+                            }}
+                            onMouseDown={(event) => event.stopPropagation()}
+                            aria-pressed={isPinned}
+                            aria-label={`${isPinned ? 'Unpin' : 'Pin'} ${transaction.label}`}
+                          >
+                            📌
+                          </button>
+                          <button
+                            type="button"
+                            className="transaction-action transaction-action--duplicate"
+                            onClick={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              duplicateTransaction(activeSidebarCategory.id, transaction.id);
+                            }}
+                            onMouseDown={(event) => event.stopPropagation()}
+                            aria-label={`Duplicate ${transaction.label}`}
+                          >
+                            ⎘
+                          </button>
+                          <button
+                            type="button"
+                            className="transaction-action transaction-action--delete"
+                            onClick={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              deleteTransaction(activeSidebarCategory.id, transaction.id);
+                            }}
+                            onMouseDown={(event) => event.stopPropagation()}
+                            aria-label={`Delete ${transaction.label}`}
+                          >
+                            🗑️
+                          </button>
+                        </div>
                         <div className="transaction-info">
                           <span className="transaction-label">{transaction.label}</span>
                           <span className="transaction-meta">{metaParts.join(' • ')}</span>

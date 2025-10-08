@@ -831,10 +831,34 @@ a {
   transform: translateY(-2px);
 }
 
-.transaction-pin {
+
+.transaction-actions {
   position: absolute;
   top: 0.45rem;
   right: 0.45rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity var(--transition-snappy), transform var(--transition-snappy);
+}
+
+.transaction-actions--active {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.transaction-card:hover .transaction-actions,
+.transaction-card:focus-within .transaction-actions {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.transaction-action {
   border: none;
   border-radius: 999px;
   padding: 0.3rem 0.55rem;
@@ -844,22 +868,23 @@ a {
   line-height: 1;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.35rem;
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
   transition: opacity var(--transition-snappy), transform var(--transition-snappy),
-    background var(--transition-snappy), color var(--transition-snappy);
+    background var(--transition-snappy), color var(--transition-snappy),
+    box-shadow var(--transition-snappy);
   cursor: pointer;
   box-shadow: 0 12px 24px -18px rgba(15, 23, 42, 0.2);
 }
 
-.transaction-card:hover .transaction-pin,
-.transaction-card:focus-within .transaction-pin,
-.transaction-pin:focus-visible {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
+.transaction-action:hover,
+.transaction-action:focus-visible {
+  transform: translateY(-1px);
+}
+
+.transaction-action:focus-visible {
+  outline: 2px solid rgba(244, 182, 218, 0.75);
+  outline-offset: 2px;
 }
 
 .category-see-more {
@@ -899,13 +924,29 @@ a {
 .transaction-pin.is-pinned {
   background: linear-gradient(135deg, #fbcfe8, #bae6fd);
   color: #0f172a;
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
 }
 
-.transaction-pin:hover {
-  transform: translateY(-1px);
+.transaction-action--duplicate {
+  background: linear-gradient(135deg, rgba(186, 230, 253, 0.9), rgba(187, 247, 208, 0.9));
+  color: #0f172a;
+}
+
+.transaction-action--delete {
+  background: rgba(248, 113, 113, 0.15);
+  color: #be123c;
+}
+
+.transaction-action--delete:hover,
+.transaction-action--delete:focus-visible {
+  background: rgba(248, 113, 113, 0.25);
+}
+
+@media (hover: none) {
+  .transaction-actions {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
 }
 
 .transaction-info {
@@ -1656,7 +1697,7 @@ body.theme-dark .transaction-card--pinned {
   box-shadow: 0 0 0 2px rgba(244, 182, 218, 0.4);
 }
 
-body.theme-dark .transaction-pin {
+body.theme-dark .transaction-action {
   background: rgba(30, 41, 59, 0.9);
   color: rgba(226, 232, 240, 0.82);
   box-shadow: 0 16px 32px -24px rgba(2, 6, 23, 0.75);
@@ -1665,6 +1706,25 @@ body.theme-dark .transaction-pin {
 body.theme-dark .transaction-pin.is-pinned {
   background: linear-gradient(135deg, rgba(244, 114, 182, 0.65), rgba(59, 130, 246, 0.55));
   color: #0f172a;
+}
+
+body.theme-dark .transaction-action--duplicate {
+  background: linear-gradient(
+    135deg,
+    rgba(125, 211, 252, 0.75),
+    rgba(134, 239, 172, 0.75)
+  );
+  color: #0f172a;
+}
+
+body.theme-dark .transaction-action--delete {
+  background: rgba(248, 113, 113, 0.2);
+  color: rgba(254, 226, 226, 0.95);
+}
+
+body.theme-dark .transaction-action--delete:hover,
+body.theme-dark .transaction-action--delete:focus-visible {
+  background: rgba(248, 113, 113, 0.32);
 }
 
 body.theme-dark .drop-zone {
@@ -1831,7 +1891,7 @@ body.theme-dark .category-sidebar__close:focus-visible {
     justify-self: start;
   }
 
-  .transaction-pin {
+  .transaction-actions {
     top: 0.4rem;
     right: 0.4rem;
   }

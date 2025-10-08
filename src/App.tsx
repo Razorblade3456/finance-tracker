@@ -1226,28 +1226,8 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <header className="header">
-        <div className={`header-bar ${isHeaderStuck ? 'header-bar--stuck' : ''}`}>
-          <div className="header-top">
-            <div className="header-title">
-              <span className="logo-badge">FL</span>
-              <h1>Flow Ledger</h1>
-            </div>
-            <button
-              type="button"
-              className="theme-toggle"
-              onClick={toggleDarkMode}
-              aria-pressed={isDarkMode}
-              aria-label={darkModeLabel}
-            >
-              <span className="theme-toggle__icon" aria-hidden="true">
-                {isDarkMode ? '🌙' : '🌞'}
-              </span>
-              <span className="theme-toggle__label">
-                {isDarkMode ? 'Light mode' : 'Dark mode'}
-              </span>
-            </button>
-          </div>
+      <div className={`header-bar ${isHeaderStuck ? 'header-bar--stuck' : ''}`}>
+        <div className="header-bar__inner">
           <nav className="header-nav" aria-label="Primary">
             <ul className="header-nav__list">
               {navigationItems.map((item) => (
@@ -1263,6 +1243,26 @@ export default function App() {
               ))}
             </ul>
           </nav>
+          <button
+            type="button"
+            className="theme-toggle"
+            onClick={toggleDarkMode}
+            aria-pressed={isDarkMode}
+            aria-label={darkModeLabel}
+          >
+            <span className="theme-toggle__icon" aria-hidden="true">
+              {isDarkMode ? '🌙' : '🌞'}
+            </span>
+            <span className="theme-toggle__label">
+              {isDarkMode ? 'Light mode' : 'Dark mode'}
+            </span>
+          </button>
+        </div>
+      </div>
+      <header className="header">
+        <div className="header-title">
+          <span className="logo-badge">FL</span>
+          <h1>Flow Ledger</h1>
         </div>
         <p className="header-tagline">
           Keep your money map lightweight and beautiful today, with the structure ready to graduate

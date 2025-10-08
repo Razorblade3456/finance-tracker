@@ -83,8 +83,9 @@ a {
 .header {
   display: flex;
   flex-direction: column;
-  gap: clamp(1.25rem, 3vw, 1.75rem);
+  gap: clamp(1rem, 3vw, 1.5rem);
   margin-bottom: clamp(0.5rem, 2vw, 1.5rem);
+  text-align: center;
 }
 
 .header-bar {
@@ -92,8 +93,6 @@ a {
   top: calc(env(safe-area-inset-top, 0px) + 0.85rem);
   z-index: 20;
   display: flex;
-  flex-direction: column;
-  gap: 0.9rem;
   padding: clamp(0.85rem, 2.5vw, 1.25rem);
   border-radius: calc(var(--card-radius) * 0.75);
   border: 1px solid rgba(148, 163, 184, 0.3);
@@ -126,20 +125,22 @@ a {
   opacity: 1;
 }
 
-.header-top {
+.header-bar__inner {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
+  justify-content: center;
+  gap: clamp(0.65rem, 2vw, 1rem);
   flex-wrap: wrap;
+  width: 100%;
 }
-
 
 .header-nav {
   display: flex;
   justify-content: center;
   padding: 0.25rem 0;
   overflow: hidden;
+  flex: 1 1 auto;
+  width: 100%;
 }
 
 .header-nav__list {
@@ -203,6 +204,7 @@ a {
   align-items: center;
   gap: 0.75rem;
   flex-wrap: wrap;
+  justify-content: center;
 }
 
 .theme-toggle {
@@ -221,6 +223,7 @@ a {
   box-shadow: 0 14px 30px -22px rgba(15, 23, 42, 0.32);
   transition: transform var(--transition-snappy), box-shadow var(--transition-snappy),
     background var(--transition-snappy), border var(--transition-snappy);
+  margin-left: auto;
 }
 
 .theme-toggle:hover,
@@ -894,16 +897,16 @@ a {
 .transaction-card {
   background: rgba(255, 255, 255, 0.78);
   border-radius: 1rem;
-  padding: 1rem 0.85rem 0.85rem;
+  padding: 1rem 0.95rem;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
   gap: 0.65rem;
   align-items: flex-start;
   border: 1px solid rgba(148, 163, 184, 0.25);
   cursor: grab;
   transition: transform var(--transition-snappy), border var(--transition-snappy),
     box-shadow var(--transition-snappy);
-  position: relative;
   box-shadow: 0 18px 36px -28px rgba(148, 163, 184, 0.35);
 }
 
@@ -940,22 +943,21 @@ a {
 
 
 .transaction-actions {
-  position: absolute;
-  top: 0.45rem;
-  right: 0.45rem;
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  justify-content: flex-end;
+  gap: 0.4rem;
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
   transition: opacity var(--transition-snappy), transform var(--transition-snappy);
+  grid-column: 2;
+  grid-row: 1;
+  flex-wrap: wrap;
 }
 
 .transaction-actions--active {
   opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
 }
 
 .transaction-action {
@@ -1054,7 +1056,9 @@ a {
   flex-direction: column;
   gap: 0.2rem;
   min-width: 0;
-  padding-right: clamp(2.5rem, 8vw, 3.2rem);
+  padding-right: 0;
+  grid-column: 1;
+  grid-row: 1 / span 2;
 }
 
 .transaction-label {
@@ -1073,8 +1077,10 @@ a {
   font-weight: 600;
   font-size: 1.1rem;
   justify-self: end;
-  align-self: flex-start;
+  align-self: flex-end;
   white-space: nowrap;
+  grid-column: 2;
+  grid-row: 2;
 }
 
 .transaction-amount.expense {
@@ -2024,22 +2030,27 @@ body.theme-dark .category-sidebar__close:focus-visible {
 
   .transaction-card {
     grid-template-columns: minmax(0, 1fr);
-    gap: 0.35rem;
-    padding: 0.9rem 0.75rem 0.75rem;
-  }
-
-  .transaction-info {
-    padding-right: clamp(2.2rem, 12vw, 2.8rem);
-  }
-
-  .transaction-amount {
-    justify-self: start;
-    align-self: flex-start;
+    grid-template-rows: auto auto auto;
+    gap: 0.5rem;
+    padding: 0.9rem 0.85rem;
   }
 
   .transaction-actions {
-    top: 0.4rem;
-    right: 0.4rem;
+    grid-column: 1;
+    grid-row: 2;
+    justify-content: flex-start;
+  }
+
+  .transaction-info {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .transaction-amount {
+    grid-column: 1;
+    grid-row: 3;
+    justify-self: flex-start;
+    align-self: flex-start;
   }
 
   .insight-header p,

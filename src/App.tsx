@@ -260,12 +260,12 @@ export default function App() {
   const darkModeLabel = isDarkMode ? 'Switch to light mode' : 'Switch to dark mode';
   const navigationItems = useMemo(
     () => [
-      { id: 'monthly-overview', label: 'Monthly snapshot' },
+      { id: 'monthly-overview', label: 'Monthly' },
       { id: 'log-transaction', label: 'Log a transaction' },
       { id: 'categories-section', label: 'Categories' },
-      { id: 'pinned-transactions', label: 'Pinned reminders' },
+      { id: 'pinned-transactions', label: 'Pinned' },
       { id: 'insights-section', label: 'Budget & commitments' },
-      { id: 'yearly-outlook', label: 'Yearly outlook' }
+      { id: 'yearly-outlook', label: 'Yearly' }
     ],
     []
   );

@@ -899,6 +899,156 @@ export default function App() {
           categories={categories.map(({ id, name }) => ({ id, name }))}
           onAddTransaction={handleAddTransaction}
         />
+
+        <section className="section-block categories-section">
+          <div className="section-heading">
+            <div>
+              <h2>Categories & transactions</h2>
+              <p>
+                Refine each spending lane, keep tabs on routine payments, and pin anything you want
+                to revisit later.
+              </p>
+            </div>
+            <div className="section-heading__actions">
+              <div className="category-month-picker" ref={categoryMonthMenuRef}>
+                <button
+                  type="button"
+                  className="category-month-button"
+                  onClick={() => setCategoryMonthMenuOpen((previous) => !previous)}
+                  aria-expanded={isCategoryMonthMenuOpen}
+                  aria-haspopup="listbox"
+                >
+                  {monthLabel} {selectedYear}
+                </button>
+                {isCategoryMonthMenuOpen ? (
+                  <div className="category-month-menu" role="listbox" aria-label="Choose month">
+                    {monthOptions.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        className={`category-month-option ${
+                          option.value === selectedMonth ? 'is-active' : ''
+                        }`}
+                        role="option"
+                        aria-selected={option.value === selectedMonth}
+                        onClick={() => {
+                          setSelectedMonth(option.value);
+                          setCategoryMonthMenuOpen(false);
+                        }}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </div>
+          <div className="category-layout">
+            <div className="category-layout__row category-layout__row--primary">
+              {primaryCategories.map((category) => (
+                <CategoryColumn
+                  key={category.id}
+                  category={category}
+                  monthlyTotal={category.monthlyTotal}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
+                  onDrop={handleDrop}
+                  onDragOver={handleDragOver}
+                  isDropTarget={dropCategoryId === category.id}
+                  isDragging={Boolean(dragState)}
+                  formatCurrency={formatCurrency}
+                  onTogglePin={togglePinnedTransaction}
+                  pinnedTransactionIds={pinnedTransactionSet}
+                  onRequestDetails={openCategoryDetails}
+                />
+              ))}
+            </div>
+            {secondaryCategories.length ? (
+              <div className="category-layout__row category-layout__row--secondary">
+                {secondaryCategories.map((category) => (
+                  <CategoryColumn
+                    key={category.id}
+                    category={category}
+                    monthlyTotal={category.monthlyTotal}
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
+                    onDrop={handleDrop}
+                    onDragOver={handleDragOver}
+                    isDropTarget={dropCategoryId === category.id}
+                    isDragging={Boolean(dragState)}
+                    formatCurrency={formatCurrency}
+                    onTogglePin={togglePinnedTransaction}
+                    pinnedTransactionIds={pinnedTransactionSet}
+                    onRequestDetails={openCategoryDetails}
+                  />
+                ))}
+              </div>
+            ) : null}
+          </div>
+        </section>
+
+        <section className="section-block pinned-section">
+          <div className="pinned-card">
+            <div className="pinned-header">
+              <div className="pinned-header__intro">
+                <h2>Pinned transactions</h2>
+                <p>
+                  Hover a transaction above and tap the pin to watch it here. We’ll keep these synced
+                  once sign-in and the database ship.
+                </p>
+              </div>
+            </div>
+
+            {pinnedSummary.items.length ? (
+              <>
+                <div className="pinned-bar" role="list" aria-label="Pinned transaction totals">
+                  {pinnedSummary.items.map((item) => {
+                    const percentage = pinnedSummary.total
+                      ? (item.value / pinnedSummary.total) * 100
+                      : 0;
+
+                    return (
+                      <div
+                        key={item.id}
+                        className="pinned-bar__segment"
+                        style={{ width: `${percentage}%`, background: item.accent }}
+                        title={`${item.name} • ${formatCurrency(item.value)} per month`}
+                        role="listitem"
+                        tabIndex={0}
+                        aria-label={`${item.name} from ${item.categoryName} worth ${formatCurrency(
+                          item.value
+                        )} per month`}
+                      >
+                        <span className="pinned-bar__tooltip">
+                          <strong>{item.name}</strong>
+                          <span>{formatCurrency(item.value)} / month</span>
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <InsightList
+                  data={pinnedSummary.items.map((item) => ({
+                    id: item.id,
+                    name: `${item.name} • ${item.categoryName}`,
+                    value: item.value,
+                    accent: item.accent
+                  }))}
+                  total={pinnedSummary.total}
+                  formatCurrency={formatCurrency}
+                  ariaLabel="Pinned transactions list"
+                  emptyMessage="Pin transactions above to keep them in view."
+                />
+              </>
+            ) : (
+              <div className="pinned-empty" role="status">
+                Pin any transaction from the categories above to track it here.
+              </div>
+            )}
+          </div>
+        </section>
       </main>
 
       <section className="section-block insights-section">
@@ -959,94 +1109,6 @@ export default function App() {
           </article>
         </div>
       </section>
-
-      <section className="section-block categories-section">
-        <div className="section-heading">
-          <div>
-            <h2>Categories & transactions</h2>
-            <p>
-              Refine each spending lane, keep tabs on routine payments, and pin anything you want to
-              revisit later.
-            </p>
-          </div>
-          <div className="section-heading__actions">
-            <div className="category-month-picker" ref={categoryMonthMenuRef}>
-              <button
-                type="button"
-                className="category-month-button"
-                onClick={() => setCategoryMonthMenuOpen((previous) => !previous)}
-                aria-expanded={isCategoryMonthMenuOpen}
-                aria-haspopup="listbox"
-              >
-                {monthLabel} {selectedYear}
-              </button>
-              {isCategoryMonthMenuOpen ? (
-                <div className="category-month-menu" role="listbox" aria-label="Choose month">
-                  {monthOptions.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      className={`category-month-option ${
-                        option.value === selectedMonth ? 'is-active' : ''
-                      }`}
-                      role="option"
-                      aria-selected={option.value === selectedMonth}
-                      onClick={() => {
-                        setSelectedMonth(option.value);
-                        setCategoryMonthMenuOpen(false);
-                      }}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          </div>
-        </div>
-        <div className="category-layout">
-          <div className="category-layout__row category-layout__row--primary">
-            {primaryCategories.map((category) => (
-              <CategoryColumn
-                key={category.id}
-                category={category}
-                monthlyTotal={category.monthlyTotal}
-                onDragStart={handleDragStart}
-                onDragEnd={handleDragEnd}
-                onDrop={handleDrop}
-                onDragOver={handleDragOver}
-                isDropTarget={dropCategoryId === category.id}
-                isDragging={Boolean(dragState)}
-                formatCurrency={formatCurrency}
-                onTogglePin={togglePinnedTransaction}
-                pinnedTransactionIds={pinnedTransactionSet}
-                onRequestDetails={openCategoryDetails}
-              />
-            ))}
-          </div>
-          {secondaryCategories.length ? (
-            <div className="category-layout__row category-layout__row--secondary">
-              {secondaryCategories.map((category) => (
-                <CategoryColumn
-                  key={category.id}
-                  category={category}
-                  monthlyTotal={category.monthlyTotal}
-                  onDragStart={handleDragStart}
-                  onDragEnd={handleDragEnd}
-                  onDrop={handleDrop}
-                  onDragOver={handleDragOver}
-                  isDropTarget={dropCategoryId === category.id}
-                  isDragging={Boolean(dragState)}
-                  formatCurrency={formatCurrency}
-                  onTogglePin={togglePinnedTransaction}
-                  pinnedTransactionIds={pinnedTransactionSet}
-                  onRequestDetails={openCategoryDetails}
-                />
-              ))}
-            </div>
-      ) : null}
-    </div>
-  </section>
 
       {activeSidebarCategory ? (
         <div
@@ -1139,72 +1201,6 @@ export default function App() {
           </aside>
         </div>
       ) : null}
-
-      <section className="section-block pinned-section">
-        <div className="pinned-card">
-          <div className="pinned-header">
-            <div className="pinned-header__intro">
-              <h2>Pinned transactions</h2>
-              <p>
-                Hover a transaction above and tap the pin to watch it here. We’ll keep these synced
-                once sign-in and the database ship.
-              </p>
-            </div>
-          </div>
-
-          {pinnedSummary.items.length ? (
-            <>
-              <div
-                className="pinned-bar"
-                role="list"
-                aria-label="Pinned transaction totals"
-              >
-                {pinnedSummary.items.map((item) => {
-                  const percentage = pinnedSummary.total
-                    ? (item.value / pinnedSummary.total) * 100
-                    : 0;
-
-                  return (
-                    <div
-                      key={item.id}
-                      className="pinned-bar__segment"
-                      style={{ width: `${percentage}%`, background: item.accent }}
-                      title={`${item.name} • ${formatCurrency(item.value)} per month`}
-                      role="listitem"
-                      tabIndex={0}
-                      aria-label={`${item.name} from ${item.categoryName} worth ${formatCurrency(
-                        item.value
-                      )} per month`}
-                    >
-                      <span className="pinned-bar__tooltip">
-                        <strong>{item.name}</strong>
-                        <span>{formatCurrency(item.value)} / month</span>
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <InsightList
-                data={pinnedSummary.items.map((item) => ({
-                  id: item.id,
-                  name: `${item.name} • ${item.categoryName}`,
-                  value: item.value,
-                  accent: item.accent
-                }))}
-                total={pinnedSummary.total}
-                formatCurrency={formatCurrency}
-                ariaLabel="Pinned transactions list"
-                emptyMessage="Pin transactions above to keep them in view."
-              />
-            </>
-          ) : (
-            <div className="pinned-empty" role="status">
-              Pin any transaction from the categories above to track it here.
-            </div>
-          )}
-        </div>
-      </section>
 
       <section className="section-block yearly-section">
         <div className="yearly-card">

@@ -1,4 +1,5 @@
 import {
+  ChangeEvent,
   DragEvent as ReactDragEvent,
   useCallback,
   useEffect,
@@ -56,6 +57,8 @@ const sortTransactionsByRecency = (transactions: Transaction[]) =>
   [...transactions].sort((a, b) => getTransactionTimestamp(b) - getTransactionTimestamp(a));
 
 const themeStorageKey = 'flow-ledger-theme';
+
+const BUDGET_TIMEFRAME_MAX_MONTHS = 24;
 
 const baseCategories: Category[] = [
   {
@@ -245,6 +248,7 @@ export default function App() {
   }, []);
   const [selectedYear, setSelectedYear] = useState(() => String(new Date().getFullYear()));
   const [isCategoryMonthMenuOpen, setCategoryMonthMenuOpen] = useState(false);
+  const [budgetTimeframeMonths, setBudgetTimeframeMonths] = useState(3);
   const darkModeLabel = isDarkMode ? 'Switch to light mode' : 'Switch to dark mode';
 
   const formatter = useMemo(
@@ -623,6 +627,22 @@ export default function App() {
     [monthlyIncome, monthlyCommitments, monthlySavings, net]
   );
 
+  const sanitizedBudgetTimeframe = useMemo(() => {
+    if (!budgetTimeframeMonths || Number.isNaN(budgetTimeframeMonths)) {
+      return 1;
+    }
+
+    return Math.min(Math.max(Math.trunc(budgetTimeframeMonths), 1), BUDGET_TIMEFRAME_MAX_MONTHS);
+  }, [budgetTimeframeMonths]);
+
+  const budgetTimeframeDisplay = useMemo(() => {
+    if (sanitizedBudgetTimeframe === 1) {
+      return '1 month';
+    }
+
+    return `${sanitizedBudgetTimeframe} months`;
+  }, [sanitizedBudgetTimeframe]);
+
   const insights = useMemo(() => {
     type InsightBar = { id: string; name: string; value: number; accent: string };
 
@@ -638,11 +658,16 @@ export default function App() {
 
     const spendingTotal = spendingBars.reduce((sum, bar) => sum + bar.value, 0);
 
-    const livingCosts = Math.max(monthlyCommitments - monthlySavings, 0);
-    const savings = Math.max(monthlySavings, 0);
-    const net = monthlyIncome - monthlyCommitments;
-    const available = net > 0 ? net : 0;
-    const overBudget = net < 0 ? Math.abs(net) : 0;
+    const livingCostsMonthly = Math.max(monthlyCommitments - monthlySavings, 0);
+    const savingsMonthly = Math.max(monthlySavings, 0);
+    const netMonthly = monthlyIncome - monthlyCommitments;
+    const availableMonthly = netMonthly > 0 ? netMonthly : 0;
+    const overBudgetMonthly = netMonthly < 0 ? Math.abs(netMonthly) : 0;
+
+    const livingCosts = livingCostsMonthly * sanitizedBudgetTimeframe;
+    const savings = savingsMonthly * sanitizedBudgetTimeframe;
+    const available = availableMonthly * sanitizedBudgetTimeframe;
+    const overBudget = overBudgetMonthly * sanitizedBudgetTimeframe;
 
     const allocationBars: InsightBar[] = [];
 
@@ -683,7 +708,10 @@ export default function App() {
     }
 
     const allocationTotal = allocationBars.reduce((sum, bar) => sum + bar.value, 0);
-    const hasAvailable = available > 0;
+    const hasAvailable = availableMonthly > 0;
+    const timeframeSentence = sanitizedBudgetTimeframe === 1
+      ? 'this month'
+      : `the next ${sanitizedBudgetTimeframe} months`;
 
     return {
       spending: {
@@ -695,9 +723,13 @@ export default function App() {
         total: allocationTotal,
         summaryLabel: hasAvailable ? 'Budget allocation' : 'Budget pressure',
         summaryHelper: hasAvailable
-          ? 'How your income covers this month’s plan'
-          : 'Where commitments exceed income',
-        summaryValue: monthlyIncome > 0 ? monthlyIncome : allocationTotal
+          ? `How your income covers ${timeframeSentence}.`
+          : `Where commitments exceed income over ${timeframeSentence}.`,
+        summaryValue:
+          monthlyIncome > 0 ? monthlyIncome * sanitizedBudgetTimeframe : allocationTotal,
+        timeframeDisplay: sanitizedBudgetTimeframe === 1 ? '1 month' : `${sanitizedBudgetTimeframe} months`,
+        timeframeSentence,
+        timeframeMonths: sanitizedBudgetTimeframe
       }
     };
   }, [
@@ -705,8 +737,31 @@ export default function App() {
     categoryMonthlyTotals,
     monthlyCommitments,
     monthlySavings,
-    monthlyIncome
+    monthlyIncome,
+    sanitizedBudgetTimeframe
   ]);
+
+  const handleBudgetTimeframeChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    const nextValue = Number(event.target.value);
+
+    if (Number.isNaN(nextValue)) {
+      setBudgetTimeframeMonths(1);
+      return;
+    }
+
+    const clamped = Math.min(Math.max(Math.trunc(nextValue), 1), BUDGET_TIMEFRAME_MAX_MONTHS);
+    setBudgetTimeframeMonths(clamped);
+  }, []);
+
+  const handleBudgetTimeframeBlur = useCallback(() => {
+    setBudgetTimeframeMonths((current) => {
+      if (!current || Number.isNaN(current)) {
+        return 1;
+      }
+
+      return Math.min(Math.max(Math.trunc(current), 1), BUDGET_TIMEFRAME_MAX_MONTHS);
+    });
+  }, []);
 
   const pinnedSummary = useMemo(() => {
     type PinnedItem = {
@@ -1202,6 +1257,26 @@ export default function App() {
                 pressure.
               </p>
             </div>
+            <div className="insight-controls">
+              <label className="control-group" htmlFor="budget-timeframe">
+                <span className="control-label">Timeframe (months)</span>
+                <span className="control-input-wrapper">
+                  <input
+                    id="budget-timeframe"
+                    className="control-input"
+                    type="number"
+                    min={1}
+                    max={BUDGET_TIMEFRAME_MAX_MONTHS}
+                    value={sanitizedBudgetTimeframe}
+                    onChange={handleBudgetTimeframeChange}
+                    onBlur={handleBudgetTimeframeBlur}
+                    aria-label="Choose how many months to include in the budget overview"
+                  />
+                  <span className="control-input-suffix">months</span>
+                </span>
+              </label>
+              <span className="summary-pill">Viewing {budgetTimeframeDisplay}</span>
+            </div>
             <div className="insight-summary">
               <span className="insight-summary-label">{insights.allocation.summaryLabel}</span>
               <span className="insight-summary-value">
@@ -1213,7 +1288,7 @@ export default function App() {
               data={insights.allocation.bars}
               total={insights.allocation.total}
               formatCurrency={formatCurrency}
-              ariaLabel="Monthly budget allocation"
+              ariaLabel={`Budget allocation over ${insights.allocation.timeframeSentence}`}
               emptyMessage="Track income and commitments to see your allocation."
             />
           </article>

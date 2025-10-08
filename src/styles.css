@@ -370,6 +370,26 @@ a {
   transform: translateY(-1px);
 }
 
+.control-input-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 160px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(209, 233, 255, 0.9));
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  box-shadow: 0 14px 32px -22px rgba(15, 23, 42, 0.32);
+  padding: 0 1rem;
+  transition: box-shadow var(--transition-snappy), border-color var(--transition-snappy),
+    transform var(--transition-snappy);
+}
+
+.control-input-wrapper:focus-within {
+  border-color: rgba(59, 130, 246, 0.45);
+  box-shadow: 0 20px 40px -26px rgba(15, 23, 42, 0.4);
+  transform: translateY(-1px);
+}
+
 .control-select {
   appearance: none;
   background: transparent;
@@ -393,6 +413,40 @@ a {
   color: rgba(71, 85, 105, 0.7);
   pointer-events: none;
   transform: translateY(1px);
+}
+
+.control-input {
+  appearance: textfield;
+  background: transparent;
+  border: none;
+  padding: 0.55rem 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #0f172a;
+  width: 100%;
+  text-align: center;
+}
+
+.control-input:focus-visible {
+  outline: none;
+}
+
+.control-input::-webkit-outer-spin-button,
+.control-input::-webkit-inner-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+
+.control-input[type='number'] {
+  -moz-appearance: textfield;
+}
+
+.control-input-suffix {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(71, 85, 105, 0.7);
+  font-weight: 600;
 }
 
 .summary-controls > * {
@@ -1242,6 +1296,13 @@ textarea {
   gap: 0.75rem;
 }
 
+.insight-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-end;
+}
+
 .insight-kicker {
   font-size: 0.75rem;
   font-weight: 600;
@@ -1492,11 +1553,25 @@ body.theme-dark .control-select-wrapper {
   box-shadow: 0 22px 48px -30px rgba(2, 6, 23, 0.82);
 }
 
+body.theme-dark .control-input-wrapper {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.96), rgba(15, 23, 42, 0.9));
+  border-color: rgba(71, 85, 105, 0.6);
+  box-shadow: 0 22px 48px -30px rgba(2, 6, 23, 0.82);
+}
+
 body.theme-dark .control-select {
   color: #f1f5f9;
 }
 
 body.theme-dark .control-select-icon {
+  color: rgba(148, 163, 184, 0.75);
+}
+
+body.theme-dark .control-input {
+  color: #f1f5f9;
+}
+
+body.theme-dark .control-input-suffix {
   color: rgba(148, 163, 184, 0.75);
 }
 

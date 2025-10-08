@@ -1204,45 +1204,67 @@ export default function App() {
     setCategoryMonthMenuOpen(false);
   }, [selectedMonth, selectedYear]);
 
+  const [isHeaderStuck, setIsHeaderStuck] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const handleScroll = () => {
+      setIsHeaderStuck(window.scrollY > 32);
+    };
+
+    handleScroll();
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
   return (
     <div className="app-shell">
       <header className="header">
-        <div className="header-top">
-          <div className="header-title">
-            <span className="logo-badge">FL</span>
-            <h1>Flow Ledger</h1>
+        <div className={`header-bar ${isHeaderStuck ? 'header-bar--stuck' : ''}`}>
+          <div className="header-top">
+            <div className="header-title">
+              <span className="logo-badge">FL</span>
+              <h1>Flow Ledger</h1>
+            </div>
+            <button
+              type="button"
+              className="theme-toggle"
+              onClick={toggleDarkMode}
+              aria-pressed={isDarkMode}
+              aria-label={darkModeLabel}
+            >
+              <span className="theme-toggle__icon" aria-hidden="true">
+                {isDarkMode ? '🌙' : '🌞'}
+              </span>
+              <span className="theme-toggle__label">
+                {isDarkMode ? 'Light mode' : 'Dark mode'}
+              </span>
+            </button>
           </div>
-          <button
-            type="button"
-            className="theme-toggle"
-            onClick={toggleDarkMode}
-            aria-pressed={isDarkMode}
-            aria-label={darkModeLabel}
-          >
-            <span className="theme-toggle__icon" aria-hidden="true">
-              {isDarkMode ? '🌙' : '🌞'}
-            </span>
-            <span className="theme-toggle__label">
-              {isDarkMode ? 'Light mode' : 'Dark mode'}
-            </span>
-          </button>
+          <nav className="header-nav" aria-label="Primary">
+            <ul className="header-nav__list">
+              {navigationItems.map((item) => (
+                <li key={item.id} className="header-nav__item">
+                  <a
+                    href={`#${item.id}`}
+                    className="header-nav__link"
+                    onClick={(event) => handleNavigation(event, item.id)}
+                  >
+                    {item.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
         </div>
-        <nav className="header-nav" aria-label="Primary">
-          <ul className="header-nav__list">
-            {navigationItems.map((item) => (
-              <li key={item.id} className="header-nav__item">
-                <a
-                  href={`#${item.id}`}
-                  className="header-nav__link"
-                  onClick={(event) => handleNavigation(event, item.id)}
-                >
-                  {item.label}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </nav>
-        <p>
+        <p className="header-tagline">
           Keep your money map lightweight and beautiful today, with the structure ready to graduate
           into a native app tomorrow.
         </p>

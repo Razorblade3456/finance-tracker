@@ -978,7 +978,7 @@ export default function App() {
     [filteredCategories, sidebarCategoryId]
   );
 
-  type ExportTarget = 'monthly' | 'yearly' | 'commitments';
+  type ExportTarget = 'monthly' | 'yearly' | 'commitments' | 'allocation';
 
   const downloadCsv = useCallback((fileName: string, headers: string[], rows: (string | number)[][]) => {
     if (!rows.length) {
@@ -1039,6 +1039,30 @@ export default function App() {
         return;
       }
 
+      if (target === 'allocation') {
+        const headers = ['Allocation area', 'Total over timeframe', 'Average per month'];
+        const rows: (string | number)[][] = insights.allocation.bars.map((bar) => [
+          bar.name,
+          formatCurrency(bar.value),
+          formatCurrency(bar.monthlyValue)
+        ]);
+
+        rows.push([
+          'Total allocation',
+          formatCurrency(insights.allocation.total),
+          formatCurrency(insights.allocation.total / sanitizedInsightTimeframe)
+        ]);
+
+        const fileName = `budget-allocation-${insightTimeframeStartYear}-${String(
+          sanitizedTimeframeStartMonth + 1
+        ).padStart(2, '0')}-to-${timeframeEndDate.getFullYear()}-${String(
+          timeframeEndDate.getMonth() + 1
+        ).padStart(2, '0')}.csv`;
+
+        downloadCsv(fileName, headers, rows);
+        return;
+      }
+
       if (target === 'monthly') {
         const headers = ['Metric', 'Amount', 'Notes'];
         const rows: (string | number)[][] = [
@@ -1089,7 +1113,9 @@ export default function App() {
       sanitizedInsightTimeframe,
       insightTimeframeStartYear,
       sanitizedTimeframeStartMonth,
-      timeframeEndDate
+      timeframeEndDate,
+      insights.allocation.bars,
+      insights.allocation.total
     ]
   );
 
@@ -1518,6 +1544,11 @@ export default function App() {
                 </span>
               </label>
               <span className="summary-pill">Viewing {timeframePillLabel}</span>
+              <DownloadButton
+                label="Download budget (.csv)"
+                onClick={() => handleDownload('allocation')}
+                aria-label={`Download budget allocation from ${timeframeRangeDisplay}`}
+              />
             </div>
             <div className="insight-summary">
               <span className="insight-summary-label">{insights.allocation.summaryLabel}</span>

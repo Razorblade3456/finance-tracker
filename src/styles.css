@@ -1373,6 +1373,26 @@ a {
   gap: 0.5rem;
 }
 
+.pinned-header__note {
+  font-size: 0.85rem;
+  color: rgba(71, 85, 105, 0.72);
+}
+
+.pinned-header__note strong {
+  font-weight: 600;
+}
+
+.pinned-header__controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.pinned-header__controls .control-group {
+  width: 100%;
+}
+
 .pinned-header h2 {
   margin-bottom: 0.5rem;
 }
@@ -1393,6 +1413,16 @@ a {
 
   .pinned-header__intro {
     max-width: 70%;
+  }
+
+  .pinned-header__controls {
+    align-items: center;
+    flex-direction: row;
+    gap: 1rem;
+  }
+
+  .pinned-header__controls .control-group {
+    width: auto;
   }
 }
 
@@ -1878,6 +1908,7 @@ body.theme-dark .header p,
 body.theme-dark .section-heading p,
 body.theme-dark .summary-header p,
 body.theme-dark .pinned-header p,
+body.theme-dark .pinned-header__note,
 body.theme-dark .insight-header p,
 body.theme-dark .yearly-header p,
 body.theme-dark .trash-text,

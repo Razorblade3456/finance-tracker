@@ -226,6 +226,32 @@ const decodeGoogleCredential = (credential: string): GoogleProfile | null => {
 
 const pinAccentPalette = ['#fbcfe8', '#bae6fd', '#bbf7d0', '#fde68a', '#ddd6fe'];
 
+type PinnedViewCadence = 'Weekly' | 'Bi-weekly' | 'Monthly' | 'Quarterly' | 'Annual';
+
+const pinnedViewCadenceOptions: PinnedViewCadence[] = [
+  'Weekly',
+  'Bi-weekly',
+  'Monthly',
+  'Quarterly',
+  'Annual'
+];
+
+const monthlyToPinnedMultiplier: Record<PinnedViewCadence, number> = {
+  Weekly: 1 / cadenceToMonthlyFactor.Weekly,
+  'Bi-weekly': 1 / cadenceToMonthlyFactor['Bi-weekly'],
+  Monthly: 1,
+  Quarterly: 3,
+  Annual: 12
+};
+
+const pinnedCadenceDisplay: Record<PinnedViewCadence, string> = {
+  Weekly: 'week',
+  'Bi-weekly': '2 weeks',
+  Monthly: 'month',
+  Quarterly: 'quarter',
+  Annual: 'year'
+};
+
 const getInitialThemePreference = () => {
   if (typeof window === 'undefined') {
     return false;
@@ -263,6 +289,7 @@ export default function App() {
   const [dropCategoryId, setDropCategoryId] = useState<CategoryKey | null>(null);
   const [isTrashHovered, setIsTrashHovered] = useState(false);
   const [pinnedTransactionIds, setPinnedTransactionIds] = useState<string[]>([]);
+  const [pinnedViewCadence, setPinnedViewCadence] = useState<PinnedViewCadence>('Monthly');
   const [sidebarCategoryId, setSidebarCategoryId] = useState<CategoryKey | null>(null);
   const categoryMonthMenuRef = useRef<HTMLDivElement | null>(null);
   const monthOptions = useMemo(
@@ -1019,6 +1046,13 @@ export default function App() {
     []
   );
 
+  const handlePinnedCadenceChange = useCallback(
+    (event: ChangeEvent<HTMLSelectElement>) => {
+      setPinnedViewCadence(event.target.value as PinnedViewCadence);
+    },
+    []
+  );
+
   const pinnedSummary = useMemo(() => {
     type PinnedItem = {
       id: string;
@@ -1033,12 +1067,13 @@ export default function App() {
     }
 
     const set = new Set(pinnedTransactionIds);
-    const collected: Omit<PinnedItem, 'accent'>[] = [];
+    const multiplier = monthlyToPinnedMultiplier[pinnedViewCadence];
+    const collected: Array<Omit<PinnedItem, 'accent'>> = [];
 
     categories.forEach((category) => {
       category.transactions.forEach((transaction) => {
         if (set.has(transaction.id)) {
-          const normalized = Math.abs(
+          const normalizedMonthly = Math.abs(
             transaction.amount * cadenceToMonthlyFactor[transaction.cadence]
           );
 
@@ -1046,7 +1081,7 @@ export default function App() {
             id: transaction.id,
             name: transaction.label,
             categoryName: category.name,
-            value: normalized
+            value: normalizedMonthly * multiplier
           });
         }
       });
@@ -1062,7 +1097,7 @@ export default function App() {
     const total = items.reduce((sum, item) => sum + item.value, 0);
 
     return { items, total };
-  }, [categories, pinnedTransactionIds]);
+  }, [categories, pinnedTransactionIds, pinnedViewCadence]);
 
   const filteredCategories = useMemo<CategoryWithMonthlyTotal[]>(() => {
     const monthIndex = Number(selectedMonth);
@@ -1658,6 +1693,28 @@ export default function App() {
                   Tap the pin on any transaction above to watch it here. We’ll keep these synced
                   once sign-in and the database ship.
                 </p>
+                <span className="pinned-header__note">
+                  Showing totals per <strong>{pinnedCadenceDisplay[pinnedViewCadence]}</strong>.
+                </span>
+              </div>
+              <div className="pinned-header__controls">
+                <label className="control-group" htmlFor="pinned-timeframe">
+                  <span className="control-label">View totals by</span>
+                  <span className="control-select-wrapper">
+                    <select
+                      id="pinned-timeframe"
+                      className="control-select"
+                      value={pinnedViewCadence}
+                      onChange={handlePinnedCadenceChange}
+                    >
+                      {pinnedViewCadenceOptions.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  </span>
+                </label>
               </div>
             </div>
 
@@ -1674,16 +1731,18 @@ export default function App() {
                         key={item.id}
                         className="pinned-bar__segment"
                         style={{ width: `${percentage}%`, background: item.accent }}
-                        title={`${item.name} • ${formatCurrency(item.value)} per month`}
+                        title={`${item.name} • ${formatCurrency(item.value)} per ${pinnedCadenceDisplay[pinnedViewCadence]}`}
                         role="listitem"
                         tabIndex={0}
                         aria-label={`${item.name} from ${item.categoryName} worth ${formatCurrency(
                           item.value
-                        )} per month`}
+                        )} per ${pinnedCadenceDisplay[pinnedViewCadence]}`}
                       >
                         <span className="pinned-bar__tooltip">
                           <strong>{item.name}</strong>
-                          <span>{formatCurrency(item.value)} / month</span>
+                          <span>
+                            {formatCurrency(item.value)} / {pinnedCadenceDisplay[pinnedViewCadence]}
+                          </span>
                         </span>
                       </div>
                     );
@@ -1699,7 +1758,7 @@ export default function App() {
                   }))}
                   total={pinnedSummary.total}
                   formatCurrency={formatCurrency}
-                  ariaLabel="Pinned transactions list"
+                  ariaLabel={`Pinned transactions list per ${pinnedCadenceDisplay[pinnedViewCadence]}`}
                   emptyMessage="Pin transactions above to keep them in view."
                 />
               </>

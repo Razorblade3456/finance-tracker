@@ -14,6 +14,7 @@ import { CategoryColumn } from './components/CategoryColumn';
 import { TransactionForm } from './components/TransactionForm';
 import { InsightList } from './components/InsightList';
 import { DownloadButton } from './components/DownloadButton';
+import { GoogleSignInButton } from './components/GoogleSignInButton';
 
 const cadenceToMonthlyFactor: Record<TransactionCadence, number> = {
   Weekly: 4,
@@ -189,6 +190,40 @@ const initialCategories: Category[] = baseCategories.map((category) => ({
 
 type CategoryWithMonthlyTotal = Category & { monthlyTotal: number };
 
+type GoogleProfile = {
+  sub?: string;
+  name?: string;
+  given_name?: string;
+  family_name?: string;
+  email?: string;
+  picture?: string;
+};
+
+const normalizeBase64Segment = (segment: string) => {
+  const normalized = segment.replace(/-/g, '+').replace(/_/g, '/');
+  const padLength = (4 - (normalized.length % 4)) % 4;
+  return normalized + '='.repeat(padLength);
+};
+
+const decodeGoogleCredential = (credential: string): GoogleProfile | null => {
+  if (!credential || typeof window === 'undefined' || typeof window.atob !== 'function') {
+    return null;
+  }
+
+  const [, payload] = credential.split('.');
+  if (!payload) {
+    return null;
+  }
+
+  try {
+    const decoded = window.atob(normalizeBase64Segment(payload));
+    return JSON.parse(decoded);
+  } catch (error) {
+    console.warn('Unable to decode Google credential payload', error);
+    return null;
+  }
+};
+
 const pinAccentPalette = ['#fbcfe8', '#bae6fd', '#bbf7d0', '#fde68a', '#ddd6fe'];
 
 const getInitialThemePreference = () => {
@@ -218,6 +253,8 @@ const getInitialThemePreference = () => {
 
 export default function App() {
   const [isDarkMode, setIsDarkMode] = useState<boolean>(getInitialThemePreference);
+  const [googleCredential, setGoogleCredential] = useState<string | null>(null);
+  const [googleProfile, setGoogleProfile] = useState<GoogleProfile | null>(null);
   const [categories, setCategories] = useState<Category[]>(initialCategories);
   const [dragState, setDragState] = useState<{
     transactionId: string;
@@ -305,6 +342,42 @@ export default function App() {
       year: 'numeric'
     });
   }, []);
+
+  const handleGoogleCredential = useCallback((credential: string) => {
+    setGoogleCredential(credential);
+    const profile = decodeGoogleCredential(credential);
+    setGoogleProfile(profile ?? { name: 'Google user' });
+  }, []);
+
+  const handleGoogleSignOut = useCallback(() => {
+    setGoogleCredential(null);
+    setGoogleProfile(null);
+    if (typeof window !== 'undefined' && window.google?.accounts?.id?.disableAutoSelect) {
+      window.google.accounts.id.disableAutoSelect();
+    }
+  }, []);
+
+  const isGoogleSignedIn = useMemo(() => Boolean(googleCredential), [googleCredential]);
+
+  const googleDisplayName = useMemo(() => {
+    if (!googleProfile) {
+      return 'Google user';
+    }
+
+    if (googleProfile.given_name) {
+      return googleProfile.given_name;
+    }
+
+    if (googleProfile.name) {
+      return googleProfile.name;
+    }
+
+    if (googleProfile.email) {
+      return googleProfile.email.split('@')[0];
+    }
+
+    return 'Signed in user';
+  }, [googleProfile]);
 
   const toggleDarkMode = useCallback(() => {
     setIsDarkMode((previous) => !previous);
@@ -1354,13 +1427,54 @@ export default function App() {
         </div>
       </div>
       <header className="header">
-        <div className="header-title">
-          <span className="logo-badge">FL</span>
-          <h1>Flow Ledger</h1>
+        <div className="header-top">
+          <div className="header-title">
+            <span className="logo-badge">FL</span>
+            <h1>Flow Ledger</h1>
+          </div>
+          <div className="header-auth">
+            {isGoogleSignedIn ? (
+              <div className="header-auth__signed-in">
+                {googleProfile?.picture ? (
+                  <img
+                    src={googleProfile.picture}
+                    alt=""
+                    className="header-auth__avatar"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : null}
+                <div className="header-auth__details">
+                  <span className="header-auth__label">Signed in</span>
+                  <span className="header-auth__name">{googleDisplayName}</span>
+                  {googleProfile?.email ? (
+                    <span className="header-auth__email">{googleProfile.email}</span>
+                  ) : null}
+                </div>
+                <button type="button" className="header-auth__signout" onClick={handleGoogleSignOut}>
+                  Sign out
+                </button>
+              </div>
+            ) : (
+              <div className="header-auth__cta">
+                <GoogleSignInButton
+                  onCredential={handleGoogleCredential}
+                  theme={isDarkMode ? 'dark' : 'light'}
+                />
+                <p className="header-auth__hint">
+                  Connect with Google as soon as syncing goes live so your ledger follows you everywhere.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
         <p className="header-tagline">
           Keep your money map lightweight and beautiful today, with the structure ready to graduate
           into a native app tomorrow.
+        </p>
+        <p className="header-subtext">
+          {isGoogleSignedIn
+            ? 'Your Google session will link to the upcoming secure database once it ships.'
+            : 'Preview mode keeps data on this device until Google sign-in and cloud sync arrive.'}
         </p>
       </header>
 

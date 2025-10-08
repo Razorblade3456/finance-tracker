@@ -88,6 +88,205 @@ a {
   text-align: center;
 }
 
+.header-top {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1rem, 3vw, 1.5rem);
+  align-items: center;
+}
+
+.header-auth {
+  display: flex;
+  justify-content: center;
+  width: min(100%, 24rem);
+}
+
+.header-auth__cta,
+.header-auth__signed-in {
+  display: flex;
+  align-items: center;
+  gap: clamp(0.75rem, 2vw, 1.2rem);
+  padding: clamp(0.85rem, 2.6vw, 1.2rem) clamp(1rem, 3vw, 1.6rem);
+  border-radius: calc(var(--card-radius) / 1.65);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.86), rgba(226, 241, 255, 0.78));
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(18px);
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+:root.theme-dark .header-auth__cta,
+:root.theme-dark .header-auth__signed-in {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.82), rgba(15, 23, 42, 0.65));
+  border-color: rgba(94, 106, 132, 0.55);
+}
+
+.header-auth__cta {
+  flex-direction: column;
+  text-align: center;
+}
+
+.header-auth__hint {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.35;
+  color: rgba(15, 23, 42, 0.68);
+}
+
+:root.theme-dark .header-auth__hint {
+  color: rgba(226, 232, 240, 0.75);
+}
+
+.header-auth__signed-in {
+  flex-direction: column;
+  text-align: center;
+}
+
+.header-auth__details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.header-auth__label {
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(15, 23, 42, 0.65);
+}
+
+:root.theme-dark .header-auth__label {
+  color: rgba(226, 232, 240, 0.65);
+}
+
+.header-auth__name {
+  font-weight: 600;
+  font-size: 1rem;
+  color: inherit;
+}
+
+.header-auth__email {
+  font-size: 0.85rem;
+  color: rgba(15, 23, 42, 0.65);
+}
+
+:root.theme-dark .header-auth__email {
+  color: rgba(226, 232, 240, 0.65);
+}
+
+.header-auth__avatar {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.82);
+  box-shadow: 0 18px 36px -20px rgba(15, 23, 42, 0.55);
+}
+
+:root.theme-dark .header-auth__avatar {
+  border-color: rgba(15, 23, 42, 0.8);
+}
+
+.header-auth__signout {
+  border: none;
+  border-radius: 999px;
+  padding: 0.55rem 1.1rem;
+  background: rgba(15, 23, 42, 0.08);
+  color: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition-snappy), color var(--transition-snappy),
+    transform var(--transition-snappy);
+  white-space: nowrap;
+}
+
+:root.theme-dark .header-auth__signout {
+  background: rgba(226, 232, 240, 0.16);
+}
+
+.header-auth__signout:hover,
+.header-auth__signout:focus-visible {
+  background: rgba(15, 23, 42, 0.16);
+  transform: translateY(-1px);
+}
+
+:root.theme-dark .header-auth__signout:hover,
+:root.theme-dark .header-auth__signout:focus-visible {
+  background: rgba(226, 232, 240, 0.26);
+}
+
+.google-auth {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.google-auth__button {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.google-auth[data-status='loading'] {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.google-auth--error {
+  padding: 0.65rem 0.85rem;
+  border-radius: calc(var(--card-radius) / 1.65);
+  background: rgba(248, 113, 113, 0.12);
+  border: 1px solid rgba(248, 113, 113, 0.42);
+  font-size: 0.85rem;
+  line-height: 1.4;
+  text-align: left;
+}
+
+:root.theme-dark .google-auth--error {
+  background: rgba(248, 113, 113, 0.18);
+  border-color: rgba(248, 113, 113, 0.55);
+}
+
+.header-subtext {
+  margin: 0;
+  font-size: 0.9rem;
+  color: rgba(15, 23, 42, 0.62);
+}
+
+:root.theme-dark .header-subtext {
+  color: rgba(226, 232, 240, 0.7);
+}
+
+@media (min-width: 40rem) {
+  .header-auth__signed-in {
+    flex-direction: row;
+    text-align: left;
+  }
+
+  .header-auth__cta {
+    align-items: flex-start;
+    text-align: left;
+  }
+}
+
+@media (min-width: 56rem) {
+  .header {
+    text-align: left;
+  }
+
+  .header-top {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .header-auth {
+    justify-content: flex-end;
+  }
+}
+
 .header-bar {
   position: sticky;
   top: calc(env(safe-area-inset-top, 0px) + 0.85rem);

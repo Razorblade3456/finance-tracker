@@ -13,12 +13,18 @@ npm run dev
 - `npm run build` – type-check and build the production bundle.
 - `npm run preview` – locally preview the production build.
 
+### Enabling Google sign-in
+
+1. In the Google Cloud Console, enable **Google Identity Services** and create a Web OAuth client ID.
+2. Either set `VITE_GOOGLE_CLIENT_ID` in a `.env` file at the project root or open `src/config/googleClient.ts` and paste the same client ID into the exported `GOOGLE_CLIENT_ID` string.
+3. Restart the dev server so Vite can pick up the value. Once the ID is present, the landing page will render the Google sign-in button and forward the credential back to the app.
+
 ## Features
 
 - Five curated categories: financial obligations, lifestyle & recurring, personal & family, savings & investments, and miscellaneous.
 - Add transactions with cadence, type (expense, savings, or income), and optional notes.
 - Drag and drop transactions between categories using native HTML5 interactions.
-- Dashboard summary of monthly commitments, savings cadence, and net cash flow.
+- Dashboard summary of monthly expenses, savings cadence, and net cash flow.
 - Designed with a responsive layout that translates cleanly to a future mobile app.
 
 ## Preventing binary-file PR errors

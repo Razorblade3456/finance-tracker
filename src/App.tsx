@@ -1519,8 +1519,8 @@ export default function App() {
             <div className="summary-intro">
               <h2>Monthly summary</h2>
               <p>
-                Preview how {monthLabel} {selectedYear} is shaping up. Choose a month now and
-                everything will stay synced once Google sign-in and the database connect.
+                See {monthLabel} {selectedYear} at a glance. Pick a month now and syncing will kick in
+                when Google sign-in and the database launch.
               </p>
             </div>
             <div className="summary-controls">
@@ -1590,10 +1590,7 @@ export default function App() {
           <div className="section-heading">
             <div>
               <h2>Categories & transactions</h2>
-              <p>
-                Refine each spending lane, keep tabs on routine payments, and pin anything you want
-                to revisit later.
-              </p>
+              <p>Review recent activity, tidy each lane, and pin anything you want to watch.</p>
             </div>
             <div className="section-heading__actions">
               <div className="category-month-picker" ref={categoryMonthMenuRef}>
@@ -1689,10 +1686,7 @@ export default function App() {
             <div className="pinned-header">
               <div className="pinned-header__intro">
                 <h2>Pinned transactions</h2>
-                <p>
-                  Tap the pin on any transaction above to watch it here. We’ll keep these synced
-                  once sign-in and the database ship.
-                </p>
+                <p>Pin a transaction above to keep it handy. Syncing will follow once sign-in ships.</p>
                 <span className="pinned-header__note">
                   Showing totals per <strong>{pinnedCadenceDisplay[pinnedViewCadence]}</strong>.
                 </span>
@@ -1782,11 +1776,8 @@ export default function App() {
           <article className="insight-card insight-card--spending">
             <div className="insight-header">
               <span className="insight-kicker">Spending palette</span>
-              <h2>Explore commitments by category</h2>
-              <p>
-                Hover or focus the bars to surface the category totals that shape your
-                commitments over the selected timeframe.
-              </p>
+              <h2>Commitments by category</h2>
+              <p>Hover or tap to see which categories drive this window of spending.</p>
             </div>
             <div className="insight-controls">
               <label className="control-group" htmlFor="commitment-timeframe-start-month">
@@ -1865,11 +1856,8 @@ export default function App() {
           <article className="insight-card insight-card--allocation">
             <div className="insight-header">
               <span className="insight-kicker">Budget pulse</span>
-              <h2>Follow where the next dollar goes</h2>
-              <p>
-                Compare how income supports living costs, savings goals, and any over-budget
-                pressure.
-              </p>
+              <h2>How income is split</h2>
+              <p>See how your income covers costs, savings, and wiggle room for this timeframe.</p>
             </div>
             <div className="insight-controls">
               <label className="control-group" htmlFor="allocation-timeframe-start-month">
@@ -2082,8 +2070,8 @@ export default function App() {
             <div className="yearly-intro">
               <h2>Yearly breakdown</h2>
               <p>
-                Projected totals for {selectedYear}. Choose the year you want to preview – syncing
-                will stay automatic once Google sign-in and the database land.
+                Glance at {selectedYear} totals. Pick any year now and syncing will take over once
+                sign-in launches.
               </p>
             </div>
             <label className="control-group" htmlFor="yearly-year">

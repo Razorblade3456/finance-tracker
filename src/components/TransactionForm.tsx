@@ -90,8 +90,7 @@ export function TransactionForm({ id, categories, onAddTransaction }: Transactio
       <div>
         <h2>Log a transaction</h2>
         <p className="helper-text">
-          Keep tabs on cashflow you can eventually sync to mobile – add the details, set the date,
-          and drag it to another category as life shifts.
+          Quickly capture a change: name it, date it, choose the lane, and you’re done.
         </p>
       </div>
 

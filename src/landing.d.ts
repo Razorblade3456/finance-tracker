@@ -1,16 +1,23 @@
-export {};
+import type { FC } from 'react';
 
-declare module './landing.jsx' {
-  import type { FC } from 'react';
-
-  interface LandingProps {
-    displayName?: string;
-    onContinue: () => void;
-    onSignOut: () => void;
-    isDarkMode: boolean;
-    onToggleTheme: () => void;
-  }
-
-  const Landing: FC<LandingProps>;
-  export default Landing;
+export interface LandingThemeOverrides {
+  [token: string]: string | undefined;
 }
+
+export interface LandingProps {
+  /**
+   * Customize the color tokens used by the landing experience.
+   * Provide a map of token name to color value (CSS color string).
+   */
+  theme?: LandingThemeOverrides;
+  /**
+   * Optional overrides applied when rendering in dark mode.
+   */
+  themeDark?: LandingThemeOverrides;
+  /**
+   * Handler invoked when the Google Identity Services widget returns a credential response.
+   */
+  onGoogleCredential: (credential: string) => void;
+}
+
+export declare const Landing: FC<LandingProps>;

@@ -18,7 +18,7 @@ npm run dev
 - Five curated categories: financial obligations, lifestyle & recurring, personal & family, savings & investments, and miscellaneous.
 - Add transactions with cadence, type (expense, savings, or income), and optional notes.
 - Drag and drop transactions between categories using native HTML5 interactions.
-- Dashboard summary of monthly commitments, savings cadence, and net cash flow.
+- Dashboard summary of monthly expenses, savings cadence, and net cash flow.
 - Designed with a responsive layout that translates cleanly to a future mobile app.
 
 ## Preventing binary-file PR errors

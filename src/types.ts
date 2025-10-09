@@ -22,6 +22,7 @@ export interface Transaction {
   amount: number;
   cadence: TransactionCadence;
   flow: TransactionFlow;
+  date: string;
   note?: string;
   createdAt: string;
 }
@@ -33,3 +34,4 @@ export interface Category {
   description: string;
   transactions: Transaction[];
 }
+

@@ -17,6 +17,7 @@ const cadenceOptions: TransactionCadence[] = [
 const flowOptions: TransactionFlow[] = ['Expense', 'Savings', 'Income'];
 
 interface TransactionFormProps {
+  id?: string;
   categories: { id: CategoryKey; name: string }[];
   onAddTransaction: (payload: {
     categoryId: CategoryKey;
@@ -25,10 +26,11 @@ interface TransactionFormProps {
     cadence: TransactionCadence;
     flow: TransactionFlow;
     note: string;
+    date: string;
   }) => void;
 }
 
-export function TransactionForm({ categories, onAddTransaction }: TransactionFormProps) {
+export function TransactionForm({ id, categories, onAddTransaction }: TransactionFormProps) {
   const initialCategory = useMemo(() => {
     const firstNonIncome = categories.find((category) => category.id !== 'income');
     return firstNonIncome?.id ?? categories[0]?.id ?? 'financial-obligations';
@@ -40,6 +42,7 @@ export function TransactionForm({ categories, onAddTransaction }: TransactionFor
   const [cadence, setCadence] = useState<TransactionCadence>('Monthly');
   const [flow, setFlow] = useState<TransactionFlow>('Expense');
   const [note, setNote] = useState('');
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
 
   const resetForm = () => {
     setLabel('');
@@ -47,6 +50,7 @@ export function TransactionForm({ categories, onAddTransaction }: TransactionFor
     setCadence('Monthly');
     setFlow('Expense');
     setNote('');
+    setDate(new Date().toISOString().slice(0, 10));
   };
 
   useEffect(() => {
@@ -74,19 +78,19 @@ export function TransactionForm({ categories, onAddTransaction }: TransactionFor
       amount: parsedAmount,
       cadence,
       flow,
-      note: note.trim()
+      note: note.trim(),
+      date
     });
 
     resetForm();
   };
 
   return (
-    <form className="form-card" onSubmit={handleSubmit}>
+    <form id={id} className="form-card" onSubmit={handleSubmit} tabIndex={-1}>
       <div>
         <h2>Log a transaction</h2>
         <p className="helper-text">
-          Keep tabs on cashflow you can eventually sync to mobile – add an item and drag it to
-          another category as life shifts.
+          Quickly capture a change: name it, date it, choose the lane, and you’re done.
         </p>
       </div>
 
@@ -114,6 +118,18 @@ export function TransactionForm({ categories, onAddTransaction }: TransactionFor
             placeholder="0.00"
             value={amount}
             onChange={(event) => setAmount(event.target.value)}
+            required
+          />
+        </div>
+
+        <div className="field">
+          <label htmlFor="transaction-date">Date</label>
+          <input
+            id="transaction-date"
+            name="transaction-date"
+            type="date"
+            value={date}
+            onChange={(event) => setDate(event.target.value)}
             required
           />
         </div>

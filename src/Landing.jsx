@@ -7,7 +7,7 @@ export function Landing() {
         <GoogleLogin
             onSuccess={credentialResponse => {
                 console.log(credentialResponse);
-                console
+                console.log(jwtDecode(credentialResponse.credential));
             }}
             onError={() => {
                 console.log('Login Failed');

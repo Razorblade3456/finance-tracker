@@ -15,7 +15,7 @@ import { TransactionForm } from './components/TransactionForm';
 import { InsightList } from './components/InsightList';
 import { DownloadButton } from './components/DownloadButton';
 import { GoogleSignInButton } from './components/GoogleSignInButton';
-import Landing from './landing.jsx';
+import { Landing } from './landing.jsx';
 
 const cadenceToMonthlyFactor: Record<TransactionCadence, number> = {
   Weekly: 4,
@@ -1426,11 +1426,11 @@ export default function App() {
   if (!isGoogleSignedIn) {
     return (
       <div className="app-shell">
-        <Landing
-          isDarkMode={isDarkMode}
-          onToggleTheme={toggleDarkMode}
-          onGoogleCredential={handleGoogleCredential}
-        />
+  <Landing
+    isDarkMode={isDarkMode}
+    onToggleTheme={toggleDarkMode}
+    onGoogleCredential={handleGoogleCredential}
+  />
       </div>
     );
   }

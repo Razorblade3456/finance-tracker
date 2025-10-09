@@ -328,7 +328,7 @@ export default function App() {
       { id: 'log-transaction', label: 'Log a transaction' },
       { id: 'categories-section', label: 'Categories' },
       { id: 'pinned-transactions', label: 'Pinned' },
-      { id: 'insights-section', label: 'Budget & commitments' },
+      { id: 'insights-section', label: 'Budget & expenses' },
       { id: 'yearly-outlook', label: 'Yearly' }
     ],
     []
@@ -460,7 +460,7 @@ export default function App() {
   }, [categories]);
 
   const summary = useMemo(() => {
-    let monthlyCommitments = 0;
+    let monthlyExpenses = 0;
     let monthlySavings = 0;
     let monthlyIncome = 0;
     let totalTransactions = 0;
@@ -474,14 +474,14 @@ export default function App() {
           monthlyIncome += normalized;
         } else if (transaction.flow === 'Savings') {
           monthlySavings += normalized;
-          monthlyCommitments += normalized;
+          monthlyExpenses += normalized;
         } else {
-          monthlyCommitments += normalized;
+          monthlyExpenses += normalized;
         }
       });
     });
 
-    const net = monthlyIncome - monthlyCommitments;
+    const net = monthlyIncome - monthlyExpenses;
 
     const topCategory = categories.reduce<{ name: string; total: number }>(
       (acc, category) => {
@@ -496,7 +496,7 @@ export default function App() {
     );
 
     return {
-      monthlyCommitments,
+      monthlyExpenses,
       monthlySavings,
       monthlyIncome,
       net,
@@ -780,7 +780,7 @@ export default function App() {
     deleteTransaction(dragState.fromCategoryId, dragState.transactionId);
   };
 
-  const { monthlyCommitments, monthlySavings, monthlyIncome, net } = summary;
+  const { monthlyExpenses, monthlySavings, monthlyIncome, net } = summary;
   const hasMonthlyLeftover = net >= 0;
   const netLabel = hasMonthlyLeftover ? 'Left after bills' : 'Short this month';
   const netNote = hasMonthlyLeftover
@@ -790,11 +790,11 @@ export default function App() {
   const yearlyOutlook = useMemo(
     () => ({
       income: monthlyIncome * 12,
-      commitments: monthlyCommitments * 12,
+      expenses: monthlyExpenses * 12,
       savings: monthlySavings * 12,
       net: net * 12
     }),
-    [monthlyIncome, monthlyCommitments, monthlySavings, net]
+    [monthlyIncome, monthlyExpenses, monthlySavings, net]
   );
 
   const sanitizedInsightTimeframe = useMemo(() => {
@@ -918,9 +918,9 @@ export default function App() {
 
     const spendingTotal = spendingBars.reduce((sum, bar) => sum + bar.value, 0);
 
-    const livingCostsMonthly = Math.max(monthlyCommitments - monthlySavings, 0);
+    const livingCostsMonthly = Math.max(monthlyExpenses - monthlySavings, 0);
     const savingsMonthly = Math.max(monthlySavings, 0);
-    const netMonthly = monthlyIncome - monthlyCommitments;
+    const netMonthly = monthlyIncome - monthlyExpenses;
     const availableMonthly = netMonthly > 0 ? netMonthly : 0;
     const overBudgetMonthly = netMonthly < 0 ? Math.abs(netMonthly) : 0;
 
@@ -989,7 +989,7 @@ export default function App() {
         summaryLabel: hasAvailable ? 'Budget allocation' : 'Budget pressure',
         summaryHelper: hasAvailable
           ? `How your income covers ${timeframeSentence}.`
-          : `Where commitments exceed income over ${timeframeSentence}.`,
+          : `Where expenses exceed income over ${timeframeSentence}.`,
         summaryValue:
           monthlyIncome > 0 ? monthlyIncome * sanitizedInsightTimeframe : allocationTotal,
         timeframeDisplay: timeframeMonthsDisplay,
@@ -1001,7 +1001,7 @@ export default function App() {
   }, [
     categories,
     categoryMonthlyTotals,
-    monthlyCommitments,
+    monthlyExpenses,
     monthlySavings,
     monthlyIncome,
     sanitizedInsightTimeframe,
@@ -1150,7 +1150,7 @@ export default function App() {
     [filteredCategories, sidebarCategoryId]
   );
 
-  type ExportTarget = 'monthly' | 'yearly' | 'commitments' | 'allocation';
+  type ExportTarget = 'monthly' | 'yearly' | 'expenses' | 'allocation';
 
   const downloadCsv = useCallback((fileName: string, headers: string[], rows: (string | number)[][]) => {
     if (!rows.length) {
@@ -1187,7 +1187,7 @@ export default function App() {
 
   const handleDownload = useCallback(
     (target: ExportTarget) => {
-      if (target === 'commitments') {
+      if (target === 'expenses') {
         const headers = ['Category', 'Total over timeframe', 'Average per month'];
         const rows: (string | number)[][] = insights.spending.bars.map((bar) => [
           bar.name,
@@ -1196,12 +1196,12 @@ export default function App() {
         ]);
 
         rows.push([
-          'Total commitments',
+          'Total expenses',
           formatCurrency(insights.spending.total),
           formatCurrency(insights.spending.total / sanitizedInsightTimeframe)
         ]);
 
-        const fileName = `commitments-${insightTimeframeStartYear}-${String(
+        const fileName = `expenses-${insightTimeframeStartYear}-${String(
           sanitizedTimeframeStartMonth + 1
         ).padStart(2, '0')}-to-${timeframeEndDate.getFullYear()}-${String(
           timeframeEndDate.getMonth() + 1
@@ -1239,7 +1239,7 @@ export default function App() {
         const headers = ['Metric', 'Amount', 'Notes'];
         const rows: (string | number)[][] = [
           ['Money coming in', formatCurrency(monthlyIncome), 'Average monthly income'],
-          ['Money going out', formatCurrency(monthlyCommitments), 'Bills, plans, and recurring costs'],
+          ['Money going out', formatCurrency(monthlyExpenses), 'Bills, plans, and recurring costs'],
           ['Set aside for savings', formatCurrency(monthlySavings), 'What you’re tucking away every month'],
           [netLabel, formatCurrency(net), netNote]
         ];
@@ -1256,7 +1256,7 @@ export default function App() {
         const headers = ['Metric', 'Amount'];
         const rows: (string | number)[][] = [
           ['Yearly income', formatCurrency(yearlyOutlook.income)],
-          ['Yearly bills & plans', formatCurrency(yearlyOutlook.commitments)],
+          ['Yearly bills & plans', formatCurrency(yearlyOutlook.expenses)],
           ['Saved across the year', formatCurrency(yearlyOutlook.savings)],
           [yearlyOutlook.net >= 0 ? 'Estimated cushion' : 'Projected shortfall', formatCurrency(yearlyOutlook.net)]
         ];
@@ -1268,7 +1268,7 @@ export default function App() {
     [
       downloadCsv,
       formatCurrency,
-      monthlyCommitments,
+      monthlyExpenses,
       monthlyIncome,
       monthlySavings,
       net,
@@ -1276,7 +1276,7 @@ export default function App() {
       netNote,
       selectedMonth,
       selectedYear,
-      yearlyOutlook.commitments,
+      yearlyOutlook.expenses,
       yearlyOutlook.income,
       yearlyOutlook.net,
       yearlyOutlook.savings,
@@ -1560,7 +1560,7 @@ export default function App() {
             </div>
             <div className="stat">
               <span className="stat-label">Money going out</span>
-              <span className="stat-value">{formatCurrency(monthlyCommitments)}</span>
+              <span className="stat-value">{formatCurrency(monthlyExpenses)}</span>
               <span className="stat-note">Bills, plans, and recurring costs</span>
             </div>
             <div className="stat">
@@ -1776,15 +1776,15 @@ export default function App() {
           <article className="insight-card insight-card--spending">
             <div className="insight-header">
               <span className="insight-kicker">Spending palette</span>
-              <h2>Commitments by category</h2>
+              <h2>Expenses by category</h2>
               <p>Hover or tap to see which categories drive this window of spending.</p>
             </div>
             <div className="insight-controls">
-              <label className="control-group" htmlFor="commitment-timeframe-start-month">
+              <label className="control-group" htmlFor="expenses-timeframe-start-month">
                 <span className="control-label">Start month</span>
                 <span className="control-select-wrapper">
                   <select
-                    id="commitment-timeframe-start-month"
+                    id="expenses-timeframe-start-month"
                     className="control-select"
                     value={insightTimeframeStartMonth}
                     onChange={handleInsightTimeframeStartMonthChange}
@@ -1797,11 +1797,11 @@ export default function App() {
                   </select>
                 </span>
               </label>
-              <label className="control-group" htmlFor="commitment-timeframe-start-year">
+              <label className="control-group" htmlFor="expenses-timeframe-start-year">
                 <span className="control-label">Start year</span>
                 <span className="control-select-wrapper">
                   <select
-                    id="commitment-timeframe-start-year"
+                    id="expenses-timeframe-start-year"
                     className="control-select"
                     value={insightTimeframeStartYear}
                     onChange={handleInsightTimeframeStartYearChange}
@@ -1814,11 +1814,11 @@ export default function App() {
                   </select>
                 </span>
               </label>
-              <label className="control-group" htmlFor="commitment-timeframe-months">
+              <label className="control-group" htmlFor="expenses-timeframe-months">
                 <span className="control-label">Timeframe (months)</span>
                 <span className="control-input-wrapper">
                   <input
-                    id="commitment-timeframe-months"
+                    id="expenses-timeframe-months"
                     className="control-input"
                     type="number"
                     min={1}
@@ -1826,20 +1826,20 @@ export default function App() {
                     value={sanitizedInsightTimeframe}
                     onChange={handleInsightTimeframeChange}
                     onBlur={handleInsightTimeframeBlur}
-                    aria-label="Choose how many months to include in the commitments overview"
+                    aria-label="Choose how many months to include in the expenses overview"
                   />
                   <span className="control-input-suffix">months</span>
                 </span>
               </label>
               <span className="summary-pill">Viewing {timeframePillLabel}</span>
               <DownloadButton
-                label="Download commitments (.csv)"
-                onClick={() => handleDownload('commitments')}
-                aria-label={`Download commitments from ${timeframeRangeDisplay}`}
+                label="Download expenses (.csv)"
+                onClick={() => handleDownload('expenses')}
+                aria-label={`Download expenses from ${timeframeRangeDisplay}`}
               />
             </div>
             <div className="insight-summary">
-              <span className="insight-summary-label">Commitments {timeframeSentence}</span>
+              <span className="insight-summary-label">Expenses {timeframeSentence}</span>
               <span className="insight-summary-value">
                 {formatCurrency(insights.spending.total)}
               </span>
@@ -1848,8 +1848,8 @@ export default function App() {
               data={insights.spending.bars}
               total={insights.spending.total}
               formatCurrency={formatCurrency}
-              ariaLabel={`Commitments ${timeframeSentence} by category`}
-              emptyMessage="Add expenses to visualize your commitments."
+              ariaLabel={`Expenses ${timeframeSentence} by category`}
+              emptyMessage="Add spending to visualize your expenses."
             />
           </article>
 
@@ -1930,7 +1930,7 @@ export default function App() {
               total={insights.allocation.total}
               formatCurrency={formatCurrency}
               ariaLabel={`Budget allocation over ${insights.allocation.timeframeSentence}`}
-              emptyMessage="Track income and commitments to see your allocation."
+              emptyMessage="Track income and expenses to see your allocation."
             />
           </article>
         </div>
@@ -2107,7 +2107,7 @@ export default function App() {
             </div>
             <div className="yearly-stat">
               <span className="yearly-label">Yearly bills & plans</span>
-              <span className="yearly-value">{formatCurrency(yearlyOutlook.commitments)}</span>
+              <span className="yearly-value">{formatCurrency(yearlyOutlook.expenses)}</span>
             </div>
             <div className="yearly-stat">
               <span className="yearly-label">Saved across the year</span>

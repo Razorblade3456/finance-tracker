@@ -1,3 +1,13 @@
+import { initializeApp } from "firebase/app";
+import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, User } from "firebase/auth";
+
+// TODO: replace with your config (or import your existing init)
+const firebaseApp = initializeApp({
+  apiKey: "YOUR_KEY",
+  authDomain: "YOUR_DOMAIN",
+});
+const auth = getAuth(firebaseApp);
+
 import {
   ChangeEvent,
   DragEvent as ReactDragEvent,

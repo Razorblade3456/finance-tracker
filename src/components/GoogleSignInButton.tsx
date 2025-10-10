@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { GOOGLE_CLIENT_ID } from '../config/googleClient';
+import { resolveGoogleClientId } from '../config/googleClient';
 
 type GsiButtonConfiguration = {
   type?: 'standard' | 'icon';
@@ -80,9 +80,8 @@ export const GoogleSignInButton = ({ onCredential, theme }: GoogleSignInButtonPr
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const clientId = useMemo(() => {
-    const envClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim() ?? '';
-    const fallbackClientId = (GOOGLE_CLIENT_ID ?? '').trim();
-    return envClientId || fallbackClientId;
+    const hostname = typeof window !== 'undefined' ? window.location.host : undefined;
+    return resolveGoogleClientId(hostname);
   }, []);
 
   useEffect(() => {
@@ -90,8 +89,11 @@ export const GoogleSignInButton = ({ onCredential, theme }: GoogleSignInButtonPr
 
     if (!clientId) {
       setStatus('error');
+      const hostname = typeof window !== 'undefined' ? window.location.host : 'this environment';
       setErrorMessage(
-        'Add a VITE_GOOGLE_CLIENT_ID in your environment or update src/config/googleClient.ts with your client ID to enable Google sign-in.'
+        `No Google client ID configured for ${hostname}. ` +
+          'Add a VITE_GOOGLE_CLIENT_ID environment variable or extend src/config/googleClient.ts with an entry for this host, ' +
+          'and ensure the origin is listed under Authorized JavaScript origins in the Google Cloud Console.'
       );
       return () => {
         isMounted = false;

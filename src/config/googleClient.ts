@@ -37,6 +37,31 @@ const parseHostMapFromEnv = () => {
 
 const getHostKey = (hostname?: string) => hostname?.toLowerCase().replace(/^https?:\/\//, '') ?? '';
 
+const deriveHostCandidates = (hostname?: string): string[] => {
+  const hostKey = getHostKey(hostname).replace(/:\d+$/, '');
+
+  if (!hostKey) {
+    return [];
+  }
+
+  const candidates = new Set<string>([hostKey]);
+
+  const netlifyBranchMatch = hostKey.match(/^.+?--(.+\.netlify\.app)$/);
+  if (netlifyBranchMatch) {
+    candidates.add(netlifyBranchMatch[1]);
+  }
+
+  const labels = hostKey.split('.');
+  for (let i = 1; i < labels.length - 1; i += 1) {
+    const candidate = labels.slice(i).join('.');
+    if (candidate) {
+      candidates.add(candidate);
+    }
+  }
+
+  return Array.from(candidates);
+};
+
 export const resolveGoogleClientId = (hostname?: string) => {
   const explicitClientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID ?? '').trim();
   if (explicitClientId) {
@@ -46,8 +71,8 @@ export const resolveGoogleClientId = (hostname?: string) => {
   const mapFromEnv = parseHostMapFromEnv();
   const combinedMap = mapFromEnv ? { ...FALLBACK_CLIENT_IDS_BY_HOST, ...mapFromEnv } : FALLBACK_CLIENT_IDS_BY_HOST;
 
-  const hostKey = getHostKey(hostname);
-  const clientId = combinedMap[hostKey];
+  const hostCandidates = deriveHostCandidates(hostname);
+  const clientId = hostCandidates.map((candidate) => combinedMap[candidate]).find((value) => Boolean(value));
 
   return clientId?.trim() ?? '';
 };

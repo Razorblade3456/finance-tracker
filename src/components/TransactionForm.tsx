@@ -25,7 +25,7 @@ interface TransactionFormProps {
     cadence: TransactionCadence;
     flow: TransactionFlow;
     note: string;
-  }) => void;
+  }) => Promise<void> | void;
 }
 
 export function TransactionForm({ categories, onAddTransaction }: TransactionFormProps) {
@@ -60,7 +60,7 @@ export function TransactionForm({ categories, onAddTransaction }: TransactionFor
     });
   }, [categories, initialCategory]);
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const parsedAmount = Number(amount);
 
@@ -68,7 +68,7 @@ export function TransactionForm({ categories, onAddTransaction }: TransactionFor
       return;
     }
 
-    onAddTransaction({
+    await onAddTransaction({
       categoryId,
       label: label.trim(),
       amount: parsedAmount,

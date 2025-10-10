@@ -13,6 +13,7 @@ body {
   margin: 0;
   min-height: 100vh;
   background: transparent;
+  line-height: 1.5;
 }
 
 a {
@@ -29,6 +30,9 @@ a {
   display: flex;
   flex-direction: column;
   padding: clamp(1.5rem, 4vw, 3rem);
+  gap: clamp(1.5rem, 4vw, 2.5rem);
+  width: min(1180px, 100%);
+  margin: 0 auto;
 }
 
 .header {
@@ -72,6 +76,7 @@ a {
 .dashboard {
   display: grid;
   gap: clamp(1rem, 2vw, 1.5rem);
+  align-items: start;
 }
 
 @media (min-width: 960px) {
@@ -127,6 +132,7 @@ a {
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: clamp(1rem, 2vw, 1.5rem);
   margin-top: clamp(1.5rem, 3vw, 2.5rem);
+  overflow-x: auto;
 }
 
 @media (min-width: 1200px) {
@@ -472,6 +478,8 @@ textarea {
   padding: clamp(1rem, 3vw, 1.5rem);
   border: 1px solid rgba(37, 99, 235, 0.12);
   position: relative;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
 }
 
 .bar-chart-visual::after {
@@ -624,4 +632,254 @@ textarea {
   text-align: center;
   font-size: 0.95rem;
   color: #475569;
+}
+
+@media (max-width: 900px) {
+  .app-shell {
+    width: min(960px, 100%);
+  }
+
+  .summary-grid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+
+  .insights-card {
+    padding: clamp(1.25rem, 4vw, 2rem);
+  }
+}
+
+@media (max-width: 768px) {
+  .app-shell {
+    padding: 1.5rem;
+    gap: 1.75rem;
+  }
+
+  .header {
+    align-items: center;
+    text-align: center;
+    gap: 0.85rem;
+  }
+
+  .header-title {
+    justify-content: center;
+  }
+
+  .header p {
+    max-width: 32rem;
+  }
+
+  .dashboard {
+    gap: 1.25rem;
+  }
+
+  .summary-card,
+  .form-card,
+  .insights-card {
+    padding: 1.25rem;
+  }
+
+  .insights-section {
+    margin-top: 1.75rem;
+  }
+
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .layout-columns {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(280px, 80vw);
+    margin: 0 -1.5rem;
+    padding: 0 1.5rem 1rem;
+    scroll-snap-type: x mandatory;
+    scroll-padding-left: 1.5rem;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .category-card {
+    scroll-snap-align: start;
+  }
+
+  .bar-chart-visual {
+    padding-bottom: 1.25rem;
+  }
+
+  .bar-chart-column {
+    min-width: 64px;
+  }
+
+  .bar-chart-legend {
+    grid-template-columns: 1fr;
+  }
+
+  .trash-dropzone {
+    min-width: 0;
+    width: min(420px, 90vw);
+  }
+}
+
+@media (max-width: 640px) {
+  .header p {
+    font-size: 0.95rem;
+  }
+
+  .category-card {
+    padding: 1.15rem;
+    min-height: 250px;
+  }
+
+  .drop-zone {
+    font-size: 0.8rem;
+  }
+
+  .bar-chart-summary-helper {
+    font-size: 0.85rem;
+  }
+
+  .insights-card {
+    gap: 1.25rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .app-shell {
+    padding: 1.25rem;
+    gap: 1.5rem;
+  }
+
+  .header-title {
+    align-items: center;
+    gap: 0.65rem;
+  }
+
+  .logo-badge {
+    width: 2.25rem;
+    height: 2.25rem;
+    font-size: 1rem;
+  }
+
+  .header h1 {
+    font-size: clamp(1.5rem, 7vw, 2.1rem);
+  }
+
+  .summary-grid {
+    gap: 0.65rem;
+  }
+
+  .stat {
+    padding: 0.85rem;
+    gap: 0.2rem;
+  }
+
+  .stat-value {
+    font-size: 1.15rem;
+  }
+
+  .layout-columns {
+    grid-auto-columns: minmax(260px, 85vw);
+    margin: 0 -1.25rem;
+    padding: 0 1.25rem 1rem;
+    scroll-padding-left: 1.25rem;
+  }
+
+  .transaction-card {
+    grid-template-columns: 1fr;
+    gap: 0.4rem;
+  }
+
+  .transaction-amount {
+    justify-self: flex-start;
+  }
+
+  .transaction-meta {
+    font-size: 0.78rem;
+  }
+
+  .form-card {
+    padding: 1.1rem;
+  }
+
+  .form-grid {
+    gap: 0.85rem;
+  }
+
+  .form-card h2 {
+    font-size: 1.05rem;
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: 0.95rem;
+  }
+
+  .insights-card {
+    padding: 1.1rem;
+  }
+
+  .bar-chart-column-label {
+    font-size: 0.8rem;
+  }
+
+  .bar-chart-summary-value {
+    font-size: clamp(1.6rem, 10vw, 2rem);
+  }
+
+  .add-button {
+    width: 100%;
+  }
+
+  .trash-dropzone {
+    left: 1rem;
+    right: 1rem;
+    transform: translateX(0) scale(0.94);
+    padding: 0.8rem 1rem;
+    width: auto;
+  }
+
+  .trash-dropzone.active {
+    transform: translateX(0) scale(1);
+  }
+
+  .trash-icon {
+    width: 2.25rem;
+    height: 2.25rem;
+    font-size: 1.3rem;
+  }
+}
+
+@media (max-width: 420px) {
+  .app-shell {
+    padding: 1rem;
+  }
+
+  .header {
+    gap: 0.75rem;
+  }
+
+  .header p {
+    font-size: 0.9rem;
+  }
+
+  .layout-columns {
+    grid-auto-columns: minmax(240px, 88vw);
+    margin: 0 -1rem;
+    padding: 0 1rem 1rem;
+    scroll-padding-left: 1rem;
+  }
+
+  .category-card {
+    padding: 1rem;
+    min-height: 230px;
+  }
+
+  .footer-note {
+    padding-top: 1.25rem;
+    font-size: 0.75rem;
+  }
 }

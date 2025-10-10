@@ -1,5 +1,12 @@
 import { DragEvent as ReactDragEvent, useEffect, useMemo, useState } from 'react';
 import { Category, CategoryKey, Transaction, TransactionCadence } from './types';
+import {
+  deleteTransactionById,
+  fetchCategories,
+  fetchTransactions,
+  insertTransaction,
+  updateTransactionCategory
+} from './lib/supabaseClient';
 import { CategoryColumn } from './components/CategoryColumn';
 import { TransactionForm } from './components/TransactionForm';
 import { CategoryBarChart } from './components/CategoryBarChart';
@@ -13,148 +20,90 @@ const cadenceToMonthlyFactor: Record<TransactionCadence, number> = {
   'One-time': 1 / 12
 };
 
-const generateId = () =>
-  typeof crypto !== 'undefined' && 'randomUUID' in crypto
-    ? crypto.randomUUID()
-    : Math.random().toString(36).slice(2, 11);
+type CategoryRow = {
+  id: CategoryKey;
+  name: string;
+  accent: string;
+  description: string;
+  sort_order: number;
+};
 
-const seededTransaction = (
-  overrides: Partial<Transaction> & Pick<Transaction, 'label' | 'amount' | 'cadence' | 'flow'>
-): Transaction => ({
-  id: generateId(),
-  note: '',
-  createdAt: new Date().toISOString(),
-  ...overrides
+type TransactionRow = {
+  id: string;
+  category_id: CategoryKey;
+  label: string;
+  amount: number | string;
+  cadence: TransactionCadence;
+  flow: Transaction['flow'];
+  note: string | null;
+  created_at: string;
+};
+
+const mapCategoryRow = (row: CategoryRow): Category => ({
+  id: row.id,
+  name: row.name,
+  accent: row.accent,
+  description: row.description,
+  transactions: []
 });
 
-const initialCategories: Category[] = [
-  {
-    id: 'income',
-    name: 'Income',
-    accent: '#34d399',
-    description: 'Your primary paycheck or recurring income stream to anchor the plan.',
-    transactions: [
-      seededTransaction({
-        label: 'Primary paycheck',
-        amount: 3200,
-        cadence: 'Monthly',
-        flow: 'Income',
-        note: 'Lands near the first of each month'
-      })
-    ]
-  },
-  {
-    id: 'financial-obligations',
-    name: 'Financial obligations',
-    accent: '#38bdf8',
-    description: 'Mortgages, rent, insurance and the must-pay bills that keep life stable.',
-    transactions: [
-      seededTransaction({
-        label: 'Rent',
-        amount: 1850,
-        cadence: 'Monthly',
-        flow: 'Expense',
-        note: 'Due on the 1st each month'
-      }),
-      seededTransaction({
-        label: 'Auto insurance',
-        amount: 165,
-        cadence: 'Monthly',
-        flow: 'Expense',
-        note: 'Covers both vehicles'
-      }),
-      seededTransaction({
-        label: 'Student loan',
-        amount: 220,
-        cadence: 'Monthly',
-        flow: 'Expense'
-      })
-    ]
-  },
-  {
-    id: 'lifestyle-recurring',
-    name: 'Recurring',
-    accent: '#f472b6',
-    description: 'Subscriptions and routines that make day-to-day life feel good.',
-    transactions: [
-      seededTransaction({
-        label: 'Gym membership',
-        amount: 42,
-        cadence: 'Monthly',
-        flow: 'Expense'
-      }),
-      seededTransaction({
-        label: 'Streaming bundle',
-        amount: 28,
-        cadence: 'Monthly',
-        flow: 'Expense'
-      })
-    ]
-  },
-  {
-    id: 'personal-family',
-    name: 'Personal & Lifestyle',
-    accent: '#facc15',
-    description: 'The flexible spending for people, pets and shared experiences.',
-    transactions: [
-      seededTransaction({
-        label: 'Childcare co-op',
-        amount: 95,
-        cadence: 'Weekly',
-        flow: 'Expense'
-      }),
-      seededTransaction({
-        label: 'Family dinner night',
-        amount: 120,
-        cadence: 'Monthly',
-        flow: 'Expense'
-      })
-    ]
-  },
-  {
-    id: 'savings-investments',
-    name: 'Savings & investments',
-    accent: '#22d3ee',
-    description: 'Long-term wins such as emergency funds, retirement and brokerage deposits.',
-    transactions: [
-      seededTransaction({
-        label: '401(k) contribution',
-        amount: 350,
-        cadence: 'Monthly',
-        flow: 'Savings'
-      }),
-      seededTransaction({
-        label: 'High-yield savings',
-        amount: 150,
-        cadence: 'Monthly',
-        flow: 'Savings'
-      })
-    ]
-  },
-  {
-    id: 'miscellaneous',
-    name: 'Miscellaneous',
-    accent: '#c084fc',
-    description: 'Everything else — gifts, experiments, and the unexpected extras.',
-    transactions: [
-      seededTransaction({
-        label: 'Coffee shop budget',
-        amount: 45,
-        cadence: 'Monthly',
-        flow: 'Expense'
-      })
-    ]
-  }
-];
+const mapTransactionRow = (row: TransactionRow): Transaction => ({
+  id: row.id,
+  label: row.label,
+  amount: Number(row.amount),
+  cadence: row.cadence,
+  flow: row.flow,
+  note: row.note ?? '',
+  createdAt: row.created_at
+});
 
 export default function App() {
-  const [categories, setCategories] = useState<Category[]>(initialCategories);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [dragState, setDragState] = useState<{
     transactionId: string;
     fromCategoryId: CategoryKey;
   } | null>(null);
   const [dropCategoryId, setDropCategoryId] = useState<CategoryKey | null>(null);
   const [isTrashHovered, setIsTrashHovered] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadData() {
+      const { data: categoryRows, error: categoryError } = await fetchCategories();
+
+      if (categoryError || !categoryRows) {
+        console.error('Failed to load categories', categoryError);
+        setIsLoading(false);
+        return;
+      }
+
+      const { data: transactionRows, error: transactionError } = await fetchTransactions();
+
+      if (transactionError) {
+        console.error('Failed to load transactions', transactionError);
+      }
+
+      const categoryRowsTyped = Array.isArray(categoryRows)
+        ? (categoryRows as CategoryRow[])
+        : [];
+      const mappedCategories = categoryRowsTyped.map((row) => mapCategoryRow(row));
+      const transactionRowsTyped = Array.isArray(transactionRows)
+        ? (transactionRows as TransactionRow[])
+        : [];
+
+      const categoriesWithTransactions = mappedCategories.map((category) => ({
+        ...category,
+        transactions: transactionRowsTyped
+          .filter((transaction) => transaction.category_id === category.id)
+          .map((transaction) => mapTransactionRow(transaction))
+      }));
+
+      setCategories(categoriesWithTransactions);
+      setIsLoading(false);
+    }
+
+    void loadData();
+  }, []);
 
   const formatter = useMemo(
     () =>
@@ -242,7 +191,7 @@ export default function App() {
     };
   }, [categories, categoryMonthlyTotals]);
 
-  const handleAddTransaction = (payload: {
+  const handleAddTransaction = async (payload: {
     categoryId: CategoryKey;
     label: string;
     amount: number;
@@ -250,15 +199,23 @@ export default function App() {
     flow: Transaction['flow'];
     note: string;
   }) => {
-    const newTransaction: Transaction = {
-      id: generateId(),
+    const { data, error } = await insertTransaction({
+      category_id: payload.categoryId,
       label: payload.label,
       amount: payload.amount,
       cadence: payload.cadence,
       flow: payload.flow,
-      note: payload.note,
-      createdAt: new Date().toISOString()
-    };
+      note: payload.note
+    });
+
+    const insertedRow = Array.isArray(data) ? data[0] : data;
+
+    if (error || !insertedRow) {
+      console.error('Failed to save transaction', error);
+      return;
+    }
+
+    const newTransaction = mapTransactionRow(insertedRow as TransactionRow);
 
     setCategories((current) =>
       current.map((category) =>
@@ -272,8 +229,22 @@ export default function App() {
     );
   };
 
-  const moveTransaction = (fromCategory: CategoryKey, toCategory: CategoryKey, transactionId: string) => {
+  const moveTransaction = async (
+    fromCategory: CategoryKey,
+    toCategory: CategoryKey,
+    transactionId: string
+  ) => {
     if (fromCategory === toCategory) {
+      setDropCategoryId(null);
+      setDragState(null);
+      setIsTrashHovered(false);
+      return;
+    }
+
+    const { error } = await updateTransactionCategory(transactionId, toCategory);
+
+    if (error) {
+      console.error('Failed to move transaction', error);
       setDropCategoryId(null);
       setDragState(null);
       setIsTrashHovered(false);
@@ -336,7 +307,7 @@ export default function App() {
       return;
     }
 
-    moveTransaction(dragState.fromCategoryId, targetCategoryId, dragState.transactionId);
+    void moveTransaction(dragState.fromCategoryId, targetCategoryId, dragState.transactionId);
     setIsTrashHovered(false);
   };
 
@@ -346,7 +317,17 @@ export default function App() {
     setIsTrashHovered(false);
   };
 
-  const deleteTransaction = (categoryId: CategoryKey, transactionId: string) => {
+  const deleteTransaction = async (categoryId: CategoryKey, transactionId: string) => {
+    const { error } = await deleteTransactionById(transactionId);
+
+    if (error) {
+      console.error('Failed to delete transaction', error);
+      setDragState(null);
+      setDropCategoryId(null);
+      setIsTrashHovered(false);
+      return;
+    }
+
     setCategories((current) =>
       current.map((category) =>
         category.id === categoryId
@@ -381,10 +362,14 @@ export default function App() {
       return;
     }
 
-    deleteTransaction(dragState.fromCategoryId, dragState.transactionId);
+    void deleteTransaction(dragState.fromCategoryId, dragState.transactionId);
   };
 
   const netPrefix = summary.net >= 0 ? '+' : '-';
+
+  if (isLoading) {
+    return <div className="app-shell">Loading your budget…</div>;
+  }
 
   const chartData = useMemo(() => {
     const slices = categories

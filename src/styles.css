@@ -1329,6 +1329,58 @@ a {
   color: #38bdf8;
 }
 
+@media (max-width: 600px) {
+  .summary-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .control-group {
+    width: 100%;
+  }
+
+  .control-select-wrapper,
+  .control-input-wrapper {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .control-input {
+    text-align: left;
+  }
+
+  .category-card {
+    padding: 1rem;
+  }
+
+  .category-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .category-chip {
+    align-self: flex-start;
+  }
+
+  .transaction-card {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+    gap: 0.5rem;
+  }
+
+  .transaction-amount {
+    justify-self: flex-start;
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .transaction-actions {
+    justify-content: flex-start;
+    grid-column: 1;
+    grid-row: 3;
+  }
+}
+
 .drop-zone {
   border: 1.5px dashed rgba(148, 163, 184, 0.3);
   border-radius: 1rem;

@@ -80,7 +80,7 @@ export function CategoryColumn({
   const renderTransaction = (transaction: Transaction) => {
     const isPinned = pinnedTransactionIds.has(transaction.id);
     const amountClass = `transaction-amount ${transaction.flow.toLowerCase()}`;
-    const amountPrefix = transaction.flow === 'Expense' ? '-' : '+';
+    const amountPrefix = transaction.flow === 'Income' ? '+' : '-';
     const displayAmount = `${amountPrefix}${formatCurrency(transaction.amount)}`;
     const metaParts: string[] = [transaction.flow, transaction.cadence];
 

@@ -19,13 +19,17 @@ Follow the steps below to resolve this:
 2. Select the project that owns your OAuth client ID for Finance Tracker.
 3. Navigate to **APIs & Services → Credentials**.
 4. Click your **OAuth 2.0 Client ID** (usually of type "Web application").
-5. In the **Authorized JavaScript origins** section, add the base URLs you noted (for example, `https://moneyflowshigh.netlify.app` and any custom domains).
-6. In the **Authorized redirect URIs** section, add the full redirect URL(s) you built in step 2 (for example, `https://moneyflowshigh.netlify.app/auth/google/callback`). Add each custom-domain version as well.
+5. In the **Authorized JavaScript origins** section, click **Add URI**, paste each base URL from step 1 (for example, `https://moneyflowshigh.netlify.app` and any custom domains), and press **Enter** after each one. This step is the exact fix for Google’s "register the JavaScript origin" warning.
+6. In the **Authorized redirect URIs** section, click **Add URI**, paste the full redirect URL(s) you built in step 2 (for example, `https://moneyflowshigh.netlify.app/auth/google/callback`), and press **Enter** after each one. Add the redirect for every domain you use.
 7. Click **Save**.
+
+> **Tip:** If you see the `redirect_uri_mismatch` or "register the JavaScript origin" error again, double-check that the domain in the browser bar exactly matches one of the entries under **Authorized JavaScript origins** and that the path after the domain matches one of the **Authorized redirect URIs**.
 
 ## 4. Redeploy or Clear Cache if Needed
 1. If you changed any environment variables or OAuth client IDs used by Netlify, trigger a rebuild/deploy of your site so the new settings take effect.
 2. After redeploying, open your Netlify site in an incognito/private window and try signing in with Google again.
+
+> **Need to add the client ID to Netlify?** Set the `VITE_GOOGLE_CLIENT_ID` environment variable in your Netlify site settings (**Site configuration → Environment variables**), then redeploy. This ensures the frontend sends the right client ID when Google checks the origin.
 
 ## 5. Confirm No Extra Redirects Are Added
 * Ensure that Netlify redirects or rewrites (in `netlify.toml` or dashboard settings) do not change the `/auth/google/callback` path.

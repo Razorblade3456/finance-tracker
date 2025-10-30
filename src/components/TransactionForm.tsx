@@ -88,7 +88,7 @@ export function TransactionForm({ id, categories, onAddTransaction }: Transactio
   return (
     <form id={id} className="form-card" onSubmit={handleSubmit} tabIndex={-1}>
       <div>
-        <h2>Log a transaction</h2>
+        <h2>Log a Transaction</h2>
         <p className="helper-text">
           Quickly capture a change: name it, date it, choose the lane, and you’re done.
         </p>

@@ -82,7 +82,7 @@ const baseCategories: Category[] = [
   },
   {
     id: 'financial-obligations',
-    name: 'Financial obligations',
+    name: 'Financial Obligations',
     accent: '#93c5fd',
     description: 'Mortgages, rent, insurance and the must-pay bills that keep life stable.',
     transactions: [
@@ -150,7 +150,7 @@ const baseCategories: Category[] = [
   },
   {
     id: 'savings-investments',
-    name: 'Savings & investments',
+    name: 'Savings & Investments',
     accent: '#a5f3fc',
     description: 'Long-term wins such as emergency funds, retirement and brokerage deposits.',
     transactions: [
@@ -326,10 +326,10 @@ export default function App() {
   const navigationItems = useMemo(
     () => [
       { id: 'monthly-overview', label: 'Monthly' },
-      { id: 'log-transaction', label: 'Log a transaction' },
+      { id: 'log-transaction', label: 'Log a Transaction' },
       { id: 'categories-section', label: 'Categories' },
       { id: 'pinned-transactions', label: 'Pinned' },
-      { id: 'insights-section', label: 'Budget & expenses' },
+      { id: 'insights-section', label: 'Budget & Expenses' },
       { id: 'yearly-outlook', label: 'Yearly' }
     ],
     []
@@ -455,10 +455,10 @@ export default function App() {
       totals[category.id] = category.transactions.reduce((sum, transaction) => {
         const normalized = transaction.amount * cadenceToMonthlyFactor[transaction.cadence];
         if (transaction.flow === 'Income') {
-          return sum - normalized;
+          return sum + normalized;
         }
 
-        return sum + normalized;
+        return sum - normalized;
       }, 0);
     });
 
@@ -492,13 +492,13 @@ export default function App() {
     const topCategory = categories.reduce<{ name: string; total: number }>(
       (acc, category) => {
         const total = categoryMonthlyTotals[category.id];
-        if (total > acc.total) {
+        if (Math.abs(total) > Math.abs(acc.total)) {
           return { name: category.name, total };
         }
 
         return acc;
       },
-      { name: categories[0]?.name ?? 'Financial obligations', total: 0 }
+      { name: categories[0]?.name ?? 'Financial Obligations', total: 0 }
     );
 
     return {
@@ -788,7 +788,7 @@ export default function App() {
 
   const { monthlyExpenses, monthlySavings, monthlyIncome, net } = summary;
   const hasMonthlyLeftover = net >= 0;
-  const netLabel = hasMonthlyLeftover ? 'Left after bills' : 'Short this month';
+  const netLabel = hasMonthlyLeftover ? 'Left After Bills' : 'Short This Month';
   const netNote = hasMonthlyLeftover
     ? 'Use this for goals or flexible spending'
     : 'Plan to cover this gap soon';
@@ -913,13 +913,17 @@ export default function App() {
 
     const spendingBars: InsightBar[] = categories
       .filter((category) => category.id !== 'income')
-      .map((category) => ({
-        id: category.id,
-        name: category.name,
-        monthlyValue: categoryMonthlyTotals[category.id],
-        value: categoryMonthlyTotals[category.id] * sanitizedInsightTimeframe,
-        accent: category.accent
-      }))
+      .map((category) => {
+        const monthlyValue = Math.abs(categoryMonthlyTotals[category.id]);
+
+        return {
+          id: category.id,
+          name: category.name,
+          monthlyValue,
+          value: monthlyValue * sanitizedInsightTimeframe,
+          accent: category.accent
+        };
+      })
       .filter((bar) => bar.value > 0);
 
     const spendingTotal = spendingBars.reduce((sum, bar) => sum + bar.value, 0);
@@ -940,7 +944,7 @@ export default function App() {
     if (livingCosts > 0) {
       allocationBars.push({
         id: 'living-costs',
-        name: 'Living costs & essentials',
+        name: 'Living Costs & Essentials',
         monthlyValue: livingCostsMonthly,
         value: livingCosts,
         accent: '#93c5fd'
@@ -950,7 +954,7 @@ export default function App() {
     if (savings > 0) {
       allocationBars.push({
         id: 'savings',
-        name: 'Savings & investments',
+        name: 'Savings & Investments',
         monthlyValue: savingsMonthly,
         value: savings,
         accent: '#99f6e4'
@@ -960,7 +964,7 @@ export default function App() {
     if (available > 0) {
       allocationBars.push({
         id: 'available',
-        name: 'Available to assign',
+        name: 'Available to Assign',
         monthlyValue: availableMonthly,
         value: available,
         accent: '#bbf7d0'
@@ -970,7 +974,7 @@ export default function App() {
     if (overBudget > 0) {
       allocationBars.push({
         id: 'over-budget',
-        name: 'Over budget',
+        name: 'Over Budget',
         monthlyValue: overBudgetMonthly,
         value: overBudget,
         accent: '#fbcfe8'
@@ -1131,10 +1135,10 @@ export default function App() {
       const monthlyTotal = scopedTransactions.reduce((sum, transaction) => {
         const normalized = transaction.amount * cadenceToMonthlyFactor[transaction.cadence];
         if (transaction.flow === 'Income') {
-          return sum - normalized;
+          return sum + normalized;
         }
 
-        return sum + normalized;
+        return sum - normalized;
       }, 0);
 
       return {
@@ -1535,7 +1539,7 @@ export default function App() {
         <section id="monthly-overview" className="summary-card" tabIndex={-1}>
           <div className="summary-header">
             <div className="summary-intro">
-              <h2>Monthly summary</h2>
+              <h2>Monthly Summary</h2>
               <p>
                 See {monthLabel} {selectedYear} at a glance. Pick a month now and syncing will kick in
                 when Google sign-in and the database launch.
@@ -1572,17 +1576,17 @@ export default function App() {
           </div>
           <div className="summary-grid">
             <div className="stat">
-              <span className="stat-label">Money coming in</span>
+              <span className="stat-label">Money Coming In</span>
               <span className="stat-value">{formatCurrency(monthlyIncome)}</span>
               <span className="stat-note">Average monthly income</span>
             </div>
             <div className="stat">
-              <span className="stat-label">Money going out</span>
+              <span className="stat-label">Money Going Out</span>
               <span className="stat-value">{formatCurrency(monthlyExpenses)}</span>
               <span className="stat-note">Bills, plans, and recurring costs</span>
             </div>
             <div className="stat">
-              <span className="stat-label">Set aside for savings</span>
+              <span className="stat-label">Set Aside for Savings</span>
               <span className="stat-value">{formatCurrency(monthlySavings)}</span>
               <span className="stat-note">What you’re tucking away every month</span>
             </div>
@@ -1607,7 +1611,7 @@ export default function App() {
         >
           <div className="section-heading">
             <div>
-              <h2>Categories & transactions</h2>
+              <h2>Categories & Transactions</h2>
               <p>Review recent activity, tidy each lane, and pin anything you want to watch.</p>
             </div>
             <div className="section-heading__actions">
@@ -1703,7 +1707,7 @@ export default function App() {
           <div className="pinned-card">
             <div className="pinned-header">
               <div className="pinned-header__intro">
-                <h2>Pinned transactions</h2>
+                <h2>Pinned Transactions</h2>
                 <p>Pin a transaction above to keep it handy. Syncing will follow once sign-in ships.</p>
                 <span className="pinned-header__note">
                   Showing totals per <strong>{pinnedCadenceDisplay[pinnedViewCadence]}</strong>.
@@ -1786,15 +1790,15 @@ export default function App() {
       <section id="insights-section" className="section-block insights-section" tabIndex={-1}>
         <div className="section-heading">
           <div>
-            <h2>Insight spotlight</h2>
+            <h2>Insight Spotlight</h2>
             <p>Glance at the categories shaping your month and how income is working for you.</p>
           </div>
         </div>
         <div className="insights-grid">
           <article className="insight-card insight-card--spending">
             <div className="insight-header">
-              <span className="insight-kicker">Spending palette</span>
-              <h2>Expenses by category</h2>
+              <span className="insight-kicker">Spending Palette</span>
+              <h2>Expenses by Category</h2>
               <p>Hover or tap to see which categories drive this window of spending.</p>
             </div>
             <div className="insight-controls">
@@ -1873,8 +1877,8 @@ export default function App() {
 
           <article className="insight-card insight-card--allocation">
             <div className="insight-header">
-              <span className="insight-kicker">Budget pulse</span>
-              <h2>How income is split</h2>
+              <span className="insight-kicker">Budget Pulse</span>
+              <h2>How Income Is Split</h2>
               <p>See how your income covers costs, savings, and wiggle room for this timeframe.</p>
             </div>
             <div className="insight-controls">
@@ -1995,7 +1999,7 @@ export default function App() {
                 <div className="category-sidebar__transactions">
                   {activeSidebarCategory.transactions.map((transaction) => {
                     const isPinned = pinnedTransactionSet.has(transaction.id);
-                    const amountPrefix = transaction.flow === 'Expense' ? '-' : '+';
+                    const amountPrefix = transaction.flow === 'Income' ? '+' : '-';
                     const displayAmount = `${amountPrefix}${formatCurrency(transaction.amount)}`;
                     const amountClass = `transaction-amount ${transaction.flow.toLowerCase()}`;
                     const metaParts: string[] = [transaction.flow, transaction.cadence];
@@ -2086,7 +2090,7 @@ export default function App() {
         <div className="yearly-card">
           <div className="yearly-header">
             <div className="yearly-intro">
-              <h2>Yearly breakdown</h2>
+              <h2>Yearly Breakdown</h2>
               <p>
                 Glance at {selectedYear} totals. Pick any year now and syncing will take over once
                 sign-in launches.

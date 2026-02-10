@@ -35,11 +35,148 @@ const seededTransaction = (
   overrides: Partial<Transaction> & Pick<Transaction, 'label' | 'amount' | 'cadence' | 'flow'>
 ): Transaction => ({
   id: generateId(),
+  recurrenceSourceId: overrides.recurrenceSourceId,
   note: '',
   date: new Date().toISOString().slice(0, 10),
   createdAt: new Date().toISOString(),
   ...overrides
 });
+
+const storageVersion = 'v1';
+const anonymousStorageKey = `flow-ledger-state-${storageVersion}-anonymous`;
+
+const cadenceToMonths: Partial<Record<TransactionCadence, number>> = {
+  Monthly: 1,
+  Quarterly: 3,
+  Annual: 12
+};
+
+const cadenceToDays: Partial<Record<TransactionCadence, number>> = {
+  Weekly: 7,
+  'Bi-weekly': 14
+};
+
+const parseDateOnly = (value: string) => {
+  if (!value) {
+    return null;
+  }
+
+  const [year, month, day] = value.split('-').map((segment) => Number(segment));
+  if (!year || !month || !day) {
+    return null;
+  }
+
+  return new Date(year, month - 1, day);
+};
+
+const formatDateOnly = (value: Date) => {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  const day = String(value.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getNextOccurrenceDate = (date: Date, cadence: TransactionCadence) => {
+  const monthStep = cadenceToMonths[cadence];
+  if (monthStep) {
+    const nextDate = new Date(date);
+    nextDate.setMonth(nextDate.getMonth() + monthStep);
+    return nextDate;
+  }
+
+  const dayStep = cadenceToDays[cadence];
+  if (dayStep) {
+    const nextDate = new Date(date);
+    nextDate.setDate(nextDate.getDate() + dayStep);
+    return nextDate;
+  }
+
+  return null;
+};
+
+const applyRecurringTransactions = (inputCategories: Category[], now = new Date()) => {
+  let didChange = false;
+
+  const categories = inputCategories.map((category) => {
+    const seriesMap = new Map<string, Transaction[]>();
+
+    category.transactions.forEach((transaction) => {
+      const seriesId = transaction.recurrenceSourceId ?? transaction.id;
+      const existingSeries = seriesMap.get(seriesId) ?? [];
+      existingSeries.push({
+        ...transaction,
+        recurrenceSourceId: seriesId
+      });
+      seriesMap.set(seriesId, existingSeries);
+    });
+
+    const generatedTransactions: Transaction[] = [];
+
+    seriesMap.forEach((seriesTransactions, seriesId) => {
+      const recurringTransactions = seriesTransactions
+        .filter((transaction) => transaction.cadence !== 'One-time')
+        .sort((a, b) => getTransactionTimestamp(a) - getTransactionTimestamp(b));
+
+      if (recurringTransactions.length === 0) {
+        return;
+      }
+
+      let lastTransaction = recurringTransactions[recurringTransactions.length - 1];
+      let lastDate = parseDateOnly(lastTransaction.date);
+
+      if (!lastDate) {
+        const createdAtDate = new Date(lastTransaction.createdAt);
+        if (Number.isNaN(createdAtDate.getTime())) {
+          return;
+        }
+        lastDate = createdAtDate;
+      }
+
+      let nextDate = getNextOccurrenceDate(lastDate, lastTransaction.cadence);
+
+      while (nextDate && nextDate <= now) {
+        didChange = true;
+        const nextTransaction: Transaction = {
+          ...lastTransaction,
+          id: generateId(),
+          recurrenceSourceId: seriesId,
+          date: formatDateOnly(nextDate),
+          createdAt: nextDate.toISOString()
+        };
+
+        generatedTransactions.push(nextTransaction);
+        lastTransaction = nextTransaction;
+        nextDate = getNextOccurrenceDate(nextDate, lastTransaction.cadence);
+      }
+    });
+
+    if (generatedTransactions.length === 0) {
+      return {
+        ...category,
+        transactions: category.transactions.map((transaction) => ({
+          ...transaction,
+          recurrenceSourceId: transaction.recurrenceSourceId ?? transaction.id
+        }))
+      };
+    }
+
+    return {
+      ...category,
+      transactions: sortTransactionsByRecency([
+        ...category.transactions.map((transaction) => ({
+          ...transaction,
+          recurrenceSourceId: transaction.recurrenceSourceId ?? transaction.id
+        })),
+        ...generatedTransactions
+      ])
+    };
+  });
+
+  return {
+    categories,
+    didChange
+  };
+};
 
 const getTransactionTimestamp = (transaction: Transaction) => {
   if (transaction.date) {
@@ -67,9 +204,9 @@ const INSIGHT_TIMEFRAME_MAX_MONTHS = 24;
 const baseCategories: Category[] = [
   {
     id: 'income',
-    name: 'Income',
+    name: 'Recurring income',
     accent: '#9ae6b4',
-    description: 'Your primary paycheck or recurring income stream to anchor the plan.',
+    description: 'Paychecks and other repeating deposits that arrive on a schedule.',
     transactions: [
       seededTransaction({
         label: 'Primary paycheck',
@@ -200,6 +337,26 @@ type GoogleProfile = {
   picture?: string;
 };
 
+type PersistedAppState = {
+  categories: Category[];
+  pinnedTransactionIds: string[];
+  pinnedViewCadence: PinnedViewCadence;
+  selectedMonth: string;
+  selectedYear: string;
+  insightTimeframeMonths: number;
+  insightTimeframeStartMonth: string;
+  insightTimeframeStartYear: string;
+};
+
+const getUserStorageKey = (profile: GoogleProfile | null) => {
+  const profileKey = profile?.sub ?? profile?.email;
+  if (!profileKey) {
+    return anonymousStorageKey;
+  }
+
+  return `flow-ledger-state-${storageVersion}-${profileKey}`;
+};
+
 const normalizeBase64Segment = (segment: string) => {
   const normalized = segment.replace(/-/g, '+').replace(/_/g, '/');
   const padLength = (4 - (normalized.length % 4)) % 4;
@@ -322,6 +479,65 @@ export default function App() {
   const [insightTimeframeStartYear, setInsightTimeframeStartYear] = useState(
     () => String(new Date().getFullYear())
   );
+
+  const restorePersistedState = useCallback(
+    (profile: GoogleProfile | null) => {
+      if (typeof window === 'undefined') {
+        return;
+      }
+
+      const storageKey = getUserStorageKey(profile);
+
+      try {
+        const rawState = window.localStorage.getItem(storageKey);
+        if (!rawState) {
+          const recurring = applyRecurringTransactions(initialCategories);
+          setCategories(recurring.categories);
+          setPinnedTransactionIds([]);
+          setPinnedViewCadence('Monthly');
+          setSelectedMonth(String(new Date().getMonth()));
+          setSelectedYear(String(new Date().getFullYear()));
+          setInsightTimeframeMonths(3);
+          setInsightTimeframeStartMonth(String(new Date().getMonth()));
+          setInsightTimeframeStartYear(String(new Date().getFullYear()));
+          return;
+        }
+
+        const parsedState = JSON.parse(rawState) as Partial<PersistedAppState>;
+        const persistedCategories = Array.isArray(parsedState.categories)
+          ? parsedState.categories
+          : initialCategories;
+        const recurring = applyRecurringTransactions(persistedCategories);
+
+        setCategories(recurring.categories);
+        setPinnedTransactionIds(
+          Array.isArray(parsedState.pinnedTransactionIds) ? parsedState.pinnedTransactionIds : []
+        );
+        setPinnedViewCadence(
+          parsedState.pinnedViewCadence && pinnedViewCadenceOptions.includes(parsedState.pinnedViewCadence)
+            ? parsedState.pinnedViewCadence
+            : 'Monthly'
+        );
+        setSelectedMonth(parsedState.selectedMonth ?? String(new Date().getMonth()));
+        setSelectedYear(parsedState.selectedYear ?? String(new Date().getFullYear()));
+        setInsightTimeframeMonths(
+          typeof parsedState.insightTimeframeMonths === 'number'
+            ? parsedState.insightTimeframeMonths
+            : 3
+        );
+        setInsightTimeframeStartMonth(
+          parsedState.insightTimeframeStartMonth ?? String(new Date().getMonth())
+        );
+        setInsightTimeframeStartYear(
+          parsedState.insightTimeframeStartYear ?? String(new Date().getFullYear())
+        );
+      } catch (error) {
+        const recurring = applyRecurringTransactions(initialCategories);
+        setCategories(recurring.categories);
+      }
+    },
+    []
+  );
   const darkModeLabel = isDarkMode ? 'Switch to light mode' : 'Switch to dark mode';
   const navigationItems = useMemo(
     () => [
@@ -412,6 +628,44 @@ export default function App() {
     return 'Signed in user';
   }, [googleProfile]);
 
+  useEffect(() => {
+    restorePersistedState(googleProfile);
+  }, [googleProfile, restorePersistedState]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const storageKey = getUserStorageKey(googleProfile);
+    const stateToPersist: PersistedAppState = {
+      categories,
+      pinnedTransactionIds,
+      pinnedViewCadence,
+      selectedMonth,
+      selectedYear,
+      insightTimeframeMonths,
+      insightTimeframeStartMonth,
+      insightTimeframeStartYear
+    };
+
+    try {
+      window.localStorage.setItem(storageKey, JSON.stringify(stateToPersist));
+    } catch (error) {
+      // Ignore storage write failures.
+    }
+  }, [
+    categories,
+    googleProfile,
+    insightTimeframeMonths,
+    insightTimeframeStartMonth,
+    insightTimeframeStartYear,
+    pinnedTransactionIds,
+    pinnedViewCadence,
+    selectedMonth,
+    selectedYear
+  ]);
+
   const toggleDarkMode = useCallback(() => {
     setIsDarkMode((previous) => !previous);
   }, []);
@@ -455,10 +709,10 @@ export default function App() {
       totals[category.id] = category.transactions.reduce((sum, transaction) => {
         const normalized = transaction.amount * cadenceToMonthlyFactor[transaction.cadence];
         if (transaction.flow === 'Income') {
-          return sum - normalized;
+          return sum + normalized;
         }
 
-        return sum + normalized;
+        return sum - normalized;
       }, 0);
     });
 
@@ -520,8 +774,10 @@ export default function App() {
     note: string;
     date: string;
   }) => {
+    const recurrenceSourceId = generateId();
     const newTransaction: Transaction = {
       id: generateId(),
+      recurrenceSourceId,
       label: payload.label,
       amount: payload.amount,
       cadence: payload.cadence,
@@ -572,6 +828,7 @@ export default function App() {
         const clonedTransaction: Transaction = {
           ...target,
           id: generateId(),
+          recurrenceSourceId: generateId(),
           date: now.toISOString().slice(0, 10),
           createdAt: now.toISOString()
         };
@@ -643,6 +900,22 @@ export default function App() {
 
     return () => {
       mediaQuery.removeEventListener('change', handleChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    const syncRecurringTransactions = () => {
+      setCategories((current) => {
+        const recurring = applyRecurringTransactions(current);
+        return recurring.didChange ? recurring.categories : current;
+      });
+    };
+
+    syncRecurringTransactions();
+    const intervalId = window.setInterval(syncRecurringTransactions, 60 * 60 * 1000);
+
+    return () => {
+      window.clearInterval(intervalId);
     };
   }, []);
 
@@ -916,8 +1189,8 @@ export default function App() {
       .map((category) => ({
         id: category.id,
         name: category.name,
-        monthlyValue: categoryMonthlyTotals[category.id],
-        value: categoryMonthlyTotals[category.id] * sanitizedInsightTimeframe,
+        monthlyValue: Math.abs(categoryMonthlyTotals[category.id]),
+        value: Math.abs(categoryMonthlyTotals[category.id]) * sanitizedInsightTimeframe,
         accent: category.accent
       }))
       .filter((bar) => bar.value > 0);

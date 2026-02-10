@@ -64,6 +64,17 @@ export function TransactionForm({ id, categories, onAddTransaction }: Transactio
     });
   }, [categories, initialCategory]);
 
+  useEffect(() => {
+    if (categoryId === 'income' && flow !== 'Income') {
+      setFlow('Income');
+      return;
+    }
+
+    if (categoryId !== 'income' && flow === 'Income') {
+      setFlow('Expense');
+    }
+  }, [categoryId, flow]);
+
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const parsedAmount = Number(amount);
@@ -173,6 +184,7 @@ export function TransactionForm({ id, categories, onAddTransaction }: Transactio
             name="transaction-flow"
             value={flow}
             onChange={(event) => setFlow(event.target.value as TransactionFlow)}
+            disabled={categoryId === 'income'}
           >
             {flowOptions.map((flowOption) => (
               <option key={flowOption} value={flowOption}>

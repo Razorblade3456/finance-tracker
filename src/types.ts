@@ -18,6 +18,7 @@ export type TransactionFlow = 'Expense' | 'Income' | 'Savings';
 
 export interface Transaction {
   id: string;
+  recurringSeriesId: string;
   label: string;
   amount: number;
   cadence: TransactionCadence;
@@ -34,4 +35,3 @@ export interface Category {
   description: string;
   transactions: Transaction[];
 }
-

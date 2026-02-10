@@ -33,13 +33,18 @@ const generateId = () =>
 
 const seededTransaction = (
   overrides: Partial<Transaction> & Pick<Transaction, 'label' | 'amount' | 'cadence' | 'flow'>
-): Transaction => ({
-  id: generateId(),
-  note: '',
-  date: new Date().toISOString().slice(0, 10),
-  createdAt: new Date().toISOString(),
-  ...overrides
-});
+): Transaction => {
+  const id = generateId();
+
+  return {
+    id,
+    recurringSeriesId: id,
+    note: '',
+    date: new Date().toISOString().slice(0, 10),
+    createdAt: new Date().toISOString(),
+    ...overrides
+  };
+};
 
 const getTransactionTimestamp = (transaction: Transaction) => {
   if (transaction.date) {
@@ -60,16 +65,27 @@ const getTransactionTimestamp = (transaction: Transaction) => {
 const sortTransactionsByRecency = (transactions: Transaction[]) =>
   [...transactions].sort((a, b) => getTransactionTimestamp(b) - getTransactionTimestamp(a));
 
+const getSignedMonthlyValue = (transaction: Transaction) => {
+  const normalized = transaction.amount * cadenceToMonthlyFactor[transaction.cadence];
+
+  if (transaction.flow === 'Income') {
+    return normalized;
+  }
+
+  return -normalized;
+};
+
 const themeStorageKey = 'flow-ledger-theme';
+const appStorageKey = 'flow-ledger-data-v1';
 
 const INSIGHT_TIMEFRAME_MAX_MONTHS = 24;
 
 const baseCategories: Category[] = [
   {
     id: 'income',
-    name: 'Income',
+    name: 'Recurring income',
     accent: '#9ae6b4',
-    description: 'Your primary paycheck or recurring income stream to anchor the plan.',
+    description: 'Your paycheck and recurring income streams that fund everything else.',
     transactions: [
       seededTransaction({
         label: 'Primary paycheck',
@@ -200,6 +216,182 @@ type GoogleProfile = {
   picture?: string;
 };
 
+type PinnedViewCadence = 'Weekly' | 'Bi-weekly' | 'Monthly' | 'Quarterly' | 'Annual';
+
+const pinnedViewCadenceOptions: PinnedViewCadence[] = [
+  'Weekly',
+  'Bi-weekly',
+  'Monthly',
+  'Quarterly',
+  'Annual'
+];
+
+type PersistedAppState = {
+  categories: Category[];
+  pinnedTransactionIds: string[];
+  pinnedViewCadence: PinnedViewCadence;
+  selectedMonth: string;
+  selectedYear: string;
+  insightTimeframeMonths: number;
+  insightTimeframeStartMonth: string;
+  insightTimeframeStartYear: string;
+};
+
+const isValidDateString = (value: string) => {
+  if (!value) {
+    return false;
+  }
+
+  const parsed = new Date(value);
+  return !Number.isNaN(parsed.getTime());
+};
+
+const addCadenceInterval = (date: Date, cadence: TransactionCadence) => {
+  const next = new Date(date);
+  switch (cadence) {
+    case 'Weekly':
+      next.setDate(next.getDate() + 7);
+      break;
+    case 'Bi-weekly':
+      next.setDate(next.getDate() + 14);
+      break;
+    case 'Monthly':
+      next.setMonth(next.getMonth() + 1);
+      break;
+    case 'Quarterly':
+      next.setMonth(next.getMonth() + 3);
+      break;
+    case 'Annual':
+      next.setFullYear(next.getFullYear() + 1);
+      break;
+    case 'One-time':
+      break;
+  }
+
+  return next;
+};
+
+const normalizeTransaction = (transaction: Transaction): Transaction => ({
+  ...transaction,
+  recurringSeriesId: transaction.recurringSeriesId || transaction.id,
+  note: transaction.note ?? '',
+  date: isValidDateString(transaction.date)
+    ? transaction.date
+    : new Date(transaction.createdAt).toISOString().slice(0, 10)
+});
+
+const hydrateCategories = (categories: Category[]) =>
+  categories.map((category) => ({
+    ...category,
+    transactions: sortTransactionsByRecency(category.transactions.map(normalizeTransaction))
+  }));
+
+const applyRecurringTransactions = (categories: Category[]) => {
+  const today = new Date();
+  const todayAtMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+  return categories.map((category) => {
+    const transactionsBySeries = new Map<string, Transaction[]>();
+
+    category.transactions.forEach((transaction) => {
+      const seriesId = transaction.recurringSeriesId || transaction.id;
+      const existing = transactionsBySeries.get(seriesId) ?? [];
+      existing.push(transaction);
+      transactionsBySeries.set(seriesId, existing);
+    });
+
+    const generated: Transaction[] = [];
+
+    transactionsBySeries.forEach((seriesTransactions, recurringSeriesId) => {
+      const sortedSeries = sortTransactionsByRecency(seriesTransactions);
+      const latest = sortedSeries[0];
+      if (!latest || latest.cadence === 'One-time') {
+        return;
+      }
+
+      const baseDate = isValidDateString(latest.date)
+        ? new Date(latest.date)
+        : new Date(latest.createdAt);
+
+      if (Number.isNaN(baseDate.getTime())) {
+        return;
+      }
+
+      let nextDate = addCadenceInterval(baseDate, latest.cadence);
+
+      while (nextDate <= todayAtMidnight) {
+        generated.push({
+          ...latest,
+          id: generateId(),
+          recurringSeriesId,
+          date: nextDate.toISOString().slice(0, 10),
+          createdAt: new Date().toISOString()
+        });
+        nextDate = addCadenceInterval(nextDate, latest.cadence);
+      }
+    });
+
+    if (generated.length === 0) {
+      return {
+        ...category,
+        transactions: sortTransactionsByRecency(category.transactions)
+      };
+    }
+
+    return {
+      ...category,
+      transactions: sortTransactionsByRecency([...category.transactions, ...generated])
+    };
+  });
+};
+
+const getPersistedAppState = (): PersistedAppState | null => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  try {
+    const raw = window.localStorage.getItem(appStorageKey);
+    if (!raw) {
+      return null;
+    }
+
+    const parsed = JSON.parse(raw) as PersistedAppState;
+    if (!Array.isArray(parsed?.categories)) {
+      return null;
+    }
+
+    const categories = applyRecurringTransactions(hydrateCategories(parsed.categories));
+
+    return {
+      categories,
+      pinnedTransactionIds: Array.isArray(parsed.pinnedTransactionIds)
+        ? parsed.pinnedTransactionIds
+        : [],
+      pinnedViewCadence: pinnedViewCadenceOptions.includes(parsed.pinnedViewCadence)
+        ? parsed.pinnedViewCadence
+        : 'Monthly',
+      selectedMonth: typeof parsed.selectedMonth === 'string' ? parsed.selectedMonth : String(new Date().getMonth()),
+      selectedYear: typeof parsed.selectedYear === 'string' ? parsed.selectedYear : String(new Date().getFullYear()),
+      insightTimeframeMonths:
+        typeof parsed.insightTimeframeMonths === 'number' ? parsed.insightTimeframeMonths : 3,
+      insightTimeframeStartMonth:
+        typeof parsed.insightTimeframeStartMonth === 'string'
+          ? parsed.insightTimeframeStartMonth
+          : String(new Date().getMonth()),
+      insightTimeframeStartYear:
+        typeof parsed.insightTimeframeStartYear === 'string'
+          ? parsed.insightTimeframeStartYear
+          : String(new Date().getFullYear())
+    };
+  } catch (error) {
+    console.warn('Unable to load persisted finance tracker data', error);
+    return null;
+  }
+};
+
+const initialPersistedState = getPersistedAppState();
+
 const normalizeBase64Segment = (segment: string) => {
   const normalized = segment.replace(/-/g, '+').replace(/_/g, '/');
   const padLength = (4 - (normalized.length % 4)) % 4;
@@ -226,16 +418,6 @@ const decodeGoogleCredential = (credential: string): GoogleProfile | null => {
 };
 
 const pinAccentPalette = ['#fbcfe8', '#bae6fd', '#bbf7d0', '#fde68a', '#ddd6fe'];
-
-type PinnedViewCadence = 'Weekly' | 'Bi-weekly' | 'Monthly' | 'Quarterly' | 'Annual';
-
-const pinnedViewCadenceOptions: PinnedViewCadence[] = [
-  'Weekly',
-  'Bi-weekly',
-  'Monthly',
-  'Quarterly',
-  'Annual'
-];
 
 const monthlyToPinnedMultiplier: Record<PinnedViewCadence, number> = {
   Weekly: 1 / cadenceToMonthlyFactor.Weekly,
@@ -282,15 +464,21 @@ export default function App() {
   const [isDarkMode, setIsDarkMode] = useState<boolean>(getInitialThemePreference);
   const [googleCredential, setGoogleCredential] = useState<string | null>(null);
   const [googleProfile, setGoogleProfile] = useState<GoogleProfile | null>(null);
-  const [categories, setCategories] = useState<Category[]>(initialCategories);
+  const [categories, setCategories] = useState<Category[]>(
+    initialPersistedState?.categories ?? applyRecurringTransactions(initialCategories)
+  );
   const [dragState, setDragState] = useState<{
     transactionId: string;
     fromCategoryId: CategoryKey;
   } | null>(null);
   const [dropCategoryId, setDropCategoryId] = useState<CategoryKey | null>(null);
   const [isTrashHovered, setIsTrashHovered] = useState(false);
-  const [pinnedTransactionIds, setPinnedTransactionIds] = useState<string[]>([]);
-  const [pinnedViewCadence, setPinnedViewCadence] = useState<PinnedViewCadence>('Monthly');
+  const [pinnedTransactionIds, setPinnedTransactionIds] = useState<string[]>(
+    initialPersistedState?.pinnedTransactionIds ?? []
+  );
+  const [pinnedViewCadence, setPinnedViewCadence] = useState<PinnedViewCadence>(
+    initialPersistedState?.pinnedViewCadence ?? 'Monthly'
+  );
   const [sidebarCategoryId, setSidebarCategoryId] = useState<CategoryKey | null>(null);
   const categoryMonthMenuRef = useRef<HTMLDivElement | null>(null);
   const monthOptions = useMemo(
@@ -304,7 +492,9 @@ export default function App() {
       }),
     []
   );
-  const [selectedMonth, setSelectedMonth] = useState(() => String(new Date().getMonth()));
+  const [selectedMonth, setSelectedMonth] = useState(
+    () => initialPersistedState?.selectedMonth ?? String(new Date().getMonth())
+  );
   const monthLabel = useMemo(() => {
     const match = monthOptions.find((option) => option.value === selectedMonth);
     return match?.label ?? 'January';
@@ -313,14 +503,18 @@ export default function App() {
     const currentYear = new Date().getFullYear();
     return Array.from({ length: 5 }, (_, index) => String(currentYear - 2 + index));
   }, []);
-  const [selectedYear, setSelectedYear] = useState(() => String(new Date().getFullYear()));
+  const [selectedYear, setSelectedYear] = useState(
+    () => initialPersistedState?.selectedYear ?? String(new Date().getFullYear())
+  );
   const [isCategoryMonthMenuOpen, setCategoryMonthMenuOpen] = useState(false);
-  const [insightTimeframeMonths, setInsightTimeframeMonths] = useState(3);
+  const [insightTimeframeMonths, setInsightTimeframeMonths] = useState(
+    initialPersistedState?.insightTimeframeMonths ?? 3
+  );
   const [insightTimeframeStartMonth, setInsightTimeframeStartMonth] = useState(
-    () => String(new Date().getMonth())
+    () => initialPersistedState?.insightTimeframeStartMonth ?? String(new Date().getMonth())
   );
   const [insightTimeframeStartYear, setInsightTimeframeStartYear] = useState(
-    () => String(new Date().getFullYear())
+    () => initialPersistedState?.insightTimeframeStartYear ?? String(new Date().getFullYear())
   );
   const darkModeLabel = isDarkMode ? 'Switch to light mode' : 'Switch to dark mode';
   const navigationItems = useMemo(
@@ -522,6 +716,7 @@ export default function App() {
   }) => {
     const newTransaction: Transaction = {
       id: generateId(),
+      recurringSeriesId: generateId(),
       label: payload.label,
       amount: payload.amount,
       cadence: payload.cadence,
@@ -572,6 +767,7 @@ export default function App() {
         const clonedTransaction: Transaction = {
           ...target,
           id: generateId(),
+          recurringSeriesId: generateId(),
           date: now.toISOString().slice(0, 10),
           createdAt: now.toISOString()
         };
@@ -608,6 +804,38 @@ export default function App() {
       bodyElement.classList.remove('theme-dark');
     }
   }, [isDarkMode]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    try {
+      const stateToPersist: PersistedAppState = {
+        categories,
+        pinnedTransactionIds,
+        pinnedViewCadence,
+        selectedMonth,
+        selectedYear,
+        insightTimeframeMonths,
+        insightTimeframeStartMonth,
+        insightTimeframeStartYear
+      };
+
+      window.localStorage.setItem(appStorageKey, JSON.stringify(stateToPersist));
+    } catch (error) {
+      console.warn('Unable to persist finance tracker data', error);
+    }
+  }, [
+    categories,
+    insightTimeframeMonths,
+    insightTimeframeStartMonth,
+    insightTimeframeStartYear,
+    pinnedTransactionIds,
+    pinnedViewCadence,
+    selectedMonth,
+    selectedYear
+  ]);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -1129,12 +1357,7 @@ export default function App() {
       );
 
       const monthlyTotal = scopedTransactions.reduce((sum, transaction) => {
-        const normalized = transaction.amount * cadenceToMonthlyFactor[transaction.cadence];
-        if (transaction.flow === 'Income') {
-          return sum - normalized;
-        }
-
-        return sum + normalized;
+        return sum + getSignedMonthlyValue(transaction);
       }, 0);
 
       return {

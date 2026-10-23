@@ -13,11 +13,11 @@ npm run dev
 - `npm run build` – type-check and build the production bundle.
 - `npm run preview` – locally preview the production build.
 
-### Enabling Google sign-in
+### Local storage
 
-1. In the Google Cloud Console, enable **Google Identity Services** and create a Web OAuth client ID.
-2. Either set `VITE_GOOGLE_CLIENT_ID` in a `.env` file at the project root or open `src/config/googleClient.ts` and paste the same client ID into the exported `GOOGLE_CLIENT_ID` string.
-3. Restart the dev server so Vite can pick up the value. Once the ID is present, the landing page will render the Google sign-in button and forward the credential back to the app.
+No account, Google client ID, or API key is required. Data is saved in this browser on this origin (host and port). Existing account ledgers are preserved and the first saved account ledger is reopened automatically. Other account ledgers remain untouched. Use the same browser and URL to access earlier data. CSV downloads provide readable summaries.
+
+Monthly totals count dated transactions in the selected month, including savings as outgoing transfers. Weekly and bi-weekly payments recur by calendar date. Annual outlook and insight windows are estimates based on the selected month.
 
 ## Features
 

@@ -42,7 +42,7 @@ export function TransactionForm({ id, categories, onAddTransaction }: Transactio
   const [cadence, setCadence] = useState<TransactionCadence>('Monthly');
   const [flow, setFlow] = useState<TransactionFlow>('Expense');
   const [note, setNote] = useState('');
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(() => new Date().toLocaleDateString('en-CA'));
 
   const resetForm = () => {
     setLabel('');
@@ -50,7 +50,7 @@ export function TransactionForm({ id, categories, onAddTransaction }: Transactio
     setCadence('Monthly');
     setFlow('Expense');
     setNote('');
-    setDate(new Date().toISOString().slice(0, 10));
+    setDate(new Date().toLocaleDateString('en-CA'));
   };
 
   useEffect(() => {
@@ -79,7 +79,7 @@ export function TransactionForm({ id, categories, onAddTransaction }: Transactio
     event.preventDefault();
     const parsedAmount = Number(amount);
 
-    if (!label.trim() || Number.isNaN(parsedAmount) || parsedAmount <= 0) {
+    if (!label.trim() || !Number.isFinite(parsedAmount) || parsedAmount <= 0) {
       return;
     }
 
@@ -124,7 +124,7 @@ export function TransactionForm({ id, categories, onAddTransaction }: Transactio
             id="transaction-amount"
             name="transaction-amount"
             type="number"
-            min="0"
+            min="0.01"
             step="0.01"
             placeholder="0.00"
             value={amount}

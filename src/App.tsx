@@ -14,8 +14,6 @@ import { CategoryColumn } from './components/CategoryColumn';
 import { TransactionForm } from './components/TransactionForm';
 import { InsightList } from './components/InsightList';
 import { DownloadButton } from './components/DownloadButton';
-import { GoogleSignInButton } from './components/GoogleSignInButton';
-import Landing from './landing.jsx';
 
 const cadenceToMonthlyFactor: Record<TransactionCadence, number> = {
   Weekly: 4,
@@ -37,7 +35,7 @@ const seededTransaction = (
   id: generateId(),
   recurrenceSourceId: overrides.recurrenceSourceId,
   note: '',
-  date: new Date().toISOString().slice(0, 10),
+  date: new Date().toLocaleDateString('en-CA'),
   createdAt: new Date().toISOString(),
   ...overrides
 });
@@ -76,11 +74,15 @@ const formatDateOnly = (value: Date) => {
   return `${year}-${month}-${day}`;
 };
 
-const getNextOccurrenceDate = (date: Date, cadence: TransactionCadence) => {
+const getNextOccurrenceDate = (date: Date, cadence: TransactionCadence, anchorDay = date.getDate()) => {
   const monthStep = cadenceToMonths[cadence];
   if (monthStep) {
     const nextDate = new Date(date);
+    const day = anchorDay;
+    nextDate.setDate(1);
     nextDate.setMonth(nextDate.getMonth() + monthStep);
+    const lastDay = new Date(nextDate.getFullYear(), nextDate.getMonth() + 1, 0).getDate();
+    nextDate.setDate(Math.min(day, lastDay));
     return nextDate;
   }
 
@@ -132,7 +134,8 @@ const applyRecurringTransactions = (inputCategories: Category[], now = new Date(
         lastDate = createdAtDate;
       }
 
-      let nextDate = getNextOccurrenceDate(lastDate, lastTransaction.cadence);
+      const anchorDay = parseDateOnly(recurringTransactions[0].date)?.getDate() ?? lastDate.getDate();
+      let nextDate = getNextOccurrenceDate(lastDate, lastTransaction.cadence, anchorDay);
 
       while (nextDate && nextDate <= now) {
         didChange = true;
@@ -146,7 +149,7 @@ const applyRecurringTransactions = (inputCategories: Category[], now = new Date(
 
         generatedTransactions.push(nextTransaction);
         lastTransaction = nextTransaction;
-        nextDate = getNextOccurrenceDate(nextDate, lastTransaction.cadence);
+        nextDate = getNextOccurrenceDate(nextDate, lastTransaction.cadence, anchorDay);
       }
     });
 
@@ -180,7 +183,7 @@ const applyRecurringTransactions = (inputCategories: Category[], now = new Date(
 
 const getTransactionTimestamp = (transaction: Transaction) => {
   if (transaction.date) {
-    const parsed = new Date(transaction.date);
+    const parsed = parseDateOnly(transaction.date) ?? new Date(NaN);
     if (!Number.isNaN(parsed.getTime())) {
       return parsed.getTime();
     }
@@ -328,15 +331,6 @@ const initialCategories: Category[] = baseCategories.map((category) => ({
 
 type CategoryWithMonthlyTotal = Category & { monthlyTotal: number };
 
-type GoogleProfile = {
-  sub?: string;
-  name?: string;
-  given_name?: string;
-  family_name?: string;
-  email?: string;
-  picture?: string;
-};
-
 type PersistedAppState = {
   categories: Category[];
   pinnedTransactionIds: string[];
@@ -348,38 +342,13 @@ type PersistedAppState = {
   insightTimeframeStartYear: string;
 };
 
-const getUserStorageKey = (profile: GoogleProfile | null) => {
-  const profileKey = profile?.sub ?? profile?.email;
-  if (!profileKey) {
-    return anonymousStorageKey;
-  }
-
-  return `flow-ledger-state-${storageVersion}-${profileKey}`;
-};
-
-const normalizeBase64Segment = (segment: string) => {
-  const normalized = segment.replace(/-/g, '+').replace(/_/g, '/');
-  const padLength = (4 - (normalized.length % 4)) % 4;
-  return normalized + '='.repeat(padLength);
-};
-
-const decodeGoogleCredential = (credential: string): GoogleProfile | null => {
-  if (!credential || typeof window === 'undefined' || typeof window.atob !== 'function') {
-    return null;
-  }
-
-  const [, payload] = credential.split('.');
-  if (!payload) {
-    return null;
-  }
-
-  try {
-    const decoded = window.atob(normalizeBase64Segment(payload));
-    return JSON.parse(decoded);
-  } catch (error) {
-    console.warn('Unable to decode Google credential payload', error);
-    return null;
-  }
+// Recover the former account ledger without requiring a Google session.
+const getLocalStorageKey = () => {
+  const keys = Object.keys(window.localStorage).filter((key) =>
+    key.startsWith(`flow-ledger-state-${storageVersion}-`) && key !== anonymousStorageKey
+  );
+  // Keep account ledgers separate; consistently reopen the first existing account.
+  return keys.sort()[0] ?? anonymousStorageKey;
 };
 
 const pinAccentPalette = ['#fbcfe8', '#bae6fd', '#bbf7d0', '#fde68a', '#ddd6fe'];
@@ -437,8 +406,9 @@ const getInitialThemePreference = () => {
 
 export default function App() {
   const [isDarkMode, setIsDarkMode] = useState<boolean>(getInitialThemePreference);
-  const [googleCredential, setGoogleCredential] = useState<string | null>(null);
-  const [googleProfile, setGoogleProfile] = useState<GoogleProfile | null>(null);
+  const [isStorageReady, setStorageReady] = useState(false);
+  const storageKeyRef = useRef(anonymousStorageKey);
+  const [storageError, setStorageError] = useState('');
   const [categories, setCategories] = useState<Category[]>(initialCategories);
   const [dragState, setDragState] = useState<{
     transactionId: string;
@@ -481,15 +451,15 @@ export default function App() {
   );
 
   const restorePersistedState = useCallback(
-    (profile: GoogleProfile | null) => {
+    () => {
       if (typeof window === 'undefined') {
         return;
       }
 
-      const storageKey = getUserStorageKey(profile);
 
       try {
-        const rawState = window.localStorage.getItem(storageKey);
+        storageKeyRef.current = getLocalStorageKey();
+        const rawState = window.localStorage.getItem(storageKeyRef.current);
         if (!rawState) {
           const recurring = applyRecurringTransactions(initialCategories);
           setCategories(recurring.categories);
@@ -504,6 +474,9 @@ export default function App() {
         }
 
         const parsedState = JSON.parse(rawState) as Partial<PersistedAppState>;
+        if (!Array.isArray(parsedState.categories) || parsedState.categories.some((category) => !category || !Array.isArray(category.transactions) || category.transactions.some((transaction) => !transaction || !Number.isFinite(transaction.amount) || transaction.amount < 0 || !['Income', 'Expense', 'Savings'].includes(transaction.flow) || !(transaction.cadence in cadenceToMonthlyFactor)))) {
+          throw new Error('Invalid saved ledger');
+        }
         const persistedCategories = Array.isArray(parsedState.categories)
           ? parsedState.categories
           : initialCategories;
@@ -534,6 +507,9 @@ export default function App() {
       } catch (error) {
         const recurring = applyRecurringTransactions(initialCategories);
         setCategories(recurring.categories);
+        setStorageError("Saved data could not be loaded. Export anything you need before continuing.");
+      } finally {
+        setStorageReady(true);
       }
     },
     []
@@ -575,7 +551,7 @@ export default function App() {
       return '';
     }
 
-    const parsed = new Date(value);
+    const parsed = parseDateOnly(value) ?? new Date(NaN);
     if (Number.isNaN(parsed.getTime())) {
       return value;
     }
@@ -587,57 +563,16 @@ export default function App() {
     });
   }, []);
 
-  const handleGoogleCredential = useCallback((credential: string) => {
-    setGoogleCredential(credential);
-    const profile = decodeGoogleCredential(credential);
-    if (profile) {
-      console.log('Google sign-in success:', profile);
-    } else {
-      console.log('Google sign-in success with credential only');
-    }
-    setGoogleProfile(profile ?? { name: 'Google user' });
-  }, []);
-
-  const handleGoogleSignOut = useCallback(() => {
-    setGoogleCredential(null);
-    setGoogleProfile(null);
-    if (typeof window !== 'undefined' && window.google?.accounts?.id?.disableAutoSelect) {
-      window.google.accounts.id.disableAutoSelect();
-    }
-  }, []);
-
-  const isGoogleSignedIn = useMemo(() => Boolean(googleCredential), [googleCredential]);
-
-  const googleDisplayName = useMemo(() => {
-    if (!googleProfile) {
-      return 'Google user';
-    }
-
-    if (googleProfile.given_name) {
-      return googleProfile.given_name;
-    }
-
-    if (googleProfile.name) {
-      return googleProfile.name;
-    }
-
-    if (googleProfile.email) {
-      return googleProfile.email.split('@')[0];
-    }
-
-    return 'Signed in user';
-  }, [googleProfile]);
+  useEffect(() => {
+    restorePersistedState();
+  }, [restorePersistedState]);
 
   useEffect(() => {
-    restorePersistedState(googleProfile);
-  }, [googleProfile, restorePersistedState]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
+    if (typeof window === 'undefined' || !isStorageReady || storageError) {
       return;
     }
 
-    const storageKey = getUserStorageKey(googleProfile);
+    const storageKey = storageKeyRef.current;
     const stateToPersist: PersistedAppState = {
       categories,
       pinnedTransactionIds,
@@ -652,11 +587,12 @@ export default function App() {
     try {
       window.localStorage.setItem(storageKey, JSON.stringify(stateToPersist));
     } catch (error) {
-      // Ignore storage write failures.
+      setStorageError('Changes could not be saved in this browser. Download your summaries before closing.');
     }
   }, [
     categories,
-    googleProfile,
+    isStorageReady,
+    storageError,
     insightTimeframeMonths,
     insightTimeframeStartMonth,
     insightTimeframeStartYear,
@@ -695,6 +631,14 @@ export default function App() {
     [pinnedTransactionIds]
   );
 
+  const monthCategories = useMemo(() => categories.map((category) => ({
+    ...category,
+    transactions: category.transactions.filter((transaction) => {
+      const date = parseDateOnly(transaction.date);
+      return date?.getMonth() === Number(selectedMonth) && date?.getFullYear() === Number(selectedYear);
+    })
+  })), [categories, selectedMonth, selectedYear]);
+
   const categoryMonthlyTotals = useMemo(() => {
     const totals: Record<CategoryKey, number> = {
       income: 0,
@@ -705,9 +649,9 @@ export default function App() {
       miscellaneous: 0
     };
 
-    categories.forEach((category) => {
+    monthCategories.forEach((category) => {
       totals[category.id] = category.transactions.reduce((sum, transaction) => {
-        const normalized = transaction.amount * cadenceToMonthlyFactor[transaction.cadence];
+        const normalized = transaction.amount;
         if (transaction.flow === 'Income') {
           return sum + normalized;
         }
@@ -717,7 +661,7 @@ export default function App() {
     });
 
     return totals;
-  }, [categories]);
+  }, [monthCategories]);
 
   const summary = useMemo(() => {
     let monthlyExpenses = 0;
@@ -725,9 +669,9 @@ export default function App() {
     let monthlyIncome = 0;
     let totalTransactions = 0;
 
-    categories.forEach((category) => {
+    monthCategories.forEach((category) => {
       category.transactions.forEach((transaction) => {
-        const normalized = transaction.amount * cadenceToMonthlyFactor[transaction.cadence];
+        const normalized = transaction.amount;
         totalTransactions += 1;
 
         if (transaction.flow === 'Income') {
@@ -745,7 +689,7 @@ export default function App() {
 
     const topCategory = categories.reduce<{ name: string; total: number }>(
       (acc, category) => {
-        const total = categoryMonthlyTotals[category.id];
+        const total = category.id === 'income' ? 0 : Math.abs(categoryMonthlyTotals[category.id]);
         if (total > acc.total) {
           return { name: category.name, total };
         }
@@ -763,7 +707,7 @@ export default function App() {
       totalTransactions,
       topCategory
     };
-  }, [categories, categoryMonthlyTotals]);
+  }, [monthCategories, categoryMonthlyTotals]);
 
   const handleAddTransaction = (payload: {
     categoryId: CategoryKey;
@@ -829,7 +773,7 @@ export default function App() {
           ...target,
           id: generateId(),
           recurrenceSourceId: generateId(),
-          date: now.toISOString().slice(0, 10),
+          date: formatDateOnly(now),
           createdAt: now.toISOString()
         };
 
@@ -1378,45 +1322,12 @@ export default function App() {
     return { items, total };
   }, [categories, pinnedTransactionIds, pinnedViewCadence]);
 
-  const filteredCategories = useMemo<CategoryWithMonthlyTotal[]>(() => {
-    const monthIndex = Number(selectedMonth);
-    const yearNumber = Number(selectedYear);
-
-    return categories.map((category) => {
-      const scopedTransactions = sortTransactionsByRecency(
-        category.transactions.filter((transaction) => {
-          if (!transaction.date) {
-            return true;
-          }
-
-          const parsed = new Date(transaction.date);
-          if (Number.isNaN(parsed.getTime())) {
-            return true;
-          }
-
-          const matchesMonth = Number.isNaN(monthIndex) ? true : parsed.getMonth() === monthIndex;
-          const matchesYear = Number.isNaN(yearNumber) ? true : parsed.getFullYear() === yearNumber;
-
-          return matchesMonth && matchesYear;
-        })
-      );
-
-      const monthlyTotal = scopedTransactions.reduce((sum, transaction) => {
-        const normalized = transaction.amount * cadenceToMonthlyFactor[transaction.cadence];
-        if (transaction.flow === 'Income') {
-          return sum - normalized;
-        }
-
-        return sum + normalized;
-      }, 0);
-
-      return {
-        ...category,
-        transactions: scopedTransactions,
-        monthlyTotal
-      };
-    });
-  }, [categories, selectedMonth, selectedYear]);
+  const filteredCategories = useMemo<CategoryWithMonthlyTotal[]>(() =>
+    monthCategories.map((category) => ({
+      ...category,
+      transactions: sortTransactionsByRecency(category.transactions),
+      monthlyTotal: categoryMonthlyTotals[category.id]
+    })), [monthCategories, categoryMonthlyTotals]);
 
   const midpoint = Math.ceil(filteredCategories.length / 2);
   const primaryCategories = filteredCategories.slice(0, midpoint);
@@ -1517,9 +1428,9 @@ export default function App() {
       if (target === 'monthly') {
         const headers = ['Metric', 'Amount', 'Notes'];
         const rows: (string | number)[][] = [
-          ['Money coming in', formatCurrency(monthlyIncome), 'Average monthly income'],
-          ['Money going out', formatCurrency(monthlyExpenses), 'Bills, plans, and recurring costs'],
-          ['Set aside for savings', formatCurrency(monthlySavings), 'What you’re tucking away every month'],
+          ['Money coming in', formatCurrency(monthlyIncome), 'Income recorded this month'],
+          ['Money going out', formatCurrency(monthlyExpenses), 'Expenses and savings transfers'],
+          ['Set aside for savings', formatCurrency(monthlySavings), 'Included in money going out'],
           [netLabel, formatCurrency(net), netNote]
         ];
 
@@ -1696,18 +1607,6 @@ export default function App() {
     return classes.join(' ');
   }, [isHeaderNavEngaged, isHeaderStuck]);
 
-  if (!isGoogleSignedIn) {
-    return (
-      <div className="app-shell">
-        <Landing
-          isDarkMode={isDarkMode}
-          onToggleTheme={toggleDarkMode}
-          onGoogleCredential={handleGoogleCredential}
-        />
-      </div>
-    );
-  }
-
   return (
     <div className="app-shell">
       <div
@@ -1758,60 +1657,27 @@ export default function App() {
             <span className="logo-badge">FL</span>
             <h1>Flow Ledger</h1>
           </div>
-          <div className="header-auth">
-            {isGoogleSignedIn ? (
-              <div className="header-auth__signed-in">
-                {googleProfile?.picture ? (
-                  <img
-                    src={googleProfile.picture}
-                    alt=""
-                    className="header-auth__avatar"
-                    referrerPolicy="no-referrer"
-                  />
-                ) : null}
-                <div className="header-auth__details">
-                  <span className="header-auth__label">Signed in</span>
-                  <span className="header-auth__name">{googleDisplayName}</span>
-                  {googleProfile?.email ? (
-                    <span className="header-auth__email">{googleProfile.email}</span>
-                  ) : null}
-                </div>
-                <button type="button" className="header-auth__signout" onClick={handleGoogleSignOut}>
-                  Sign out
-                </button>
-              </div>
-            ) : (
-              <div className="header-auth__cta">
-                <GoogleSignInButton
-                  onCredential={handleGoogleCredential}
-                  theme={isDarkMode ? 'dark' : 'light'}
-                />
-                <p className="header-auth__hint">
-                  Connect with Google as soon as syncing goes live so your ledger follows you everywhere.
-                </p>
-              </div>
-            )}
-          </div>
+          <div className="local-status"><span aria-hidden="true">●</span> Personal ledger · saved on this device</div>
+          <button type="button" className="theme-toggle" onClick={toggleDarkMode} aria-label={darkModeLabel} aria-pressed={isDarkMode}>
+            {isDarkMode ? '☀ Light mode' : '☾ Dark mode'}
+          </button>
         </div>
         <p className="header-tagline">
-          Keep your money map lightweight and beautiful today, with the structure ready to graduate
-          into a native app tomorrow.
+          A little clarity for every dollar. Track your spending, build your savings, and find your balance.
         </p>
         <p className="header-subtext">
-          {isGoogleSignedIn
-            ? 'Your Google session will link to the upcoming secure database once it ships.'
-            : 'Preview mode keeps data on this device until Google sign-in and cloud sync arrive.'}
+          No account needed. Your ledger stays in this browser; CSV exports are available below.
         </p>
       </header>
 
+      {storageError ? <p className="storage-alert" role="alert">{storageError}</p> : null}
       <main className="dashboard">
         <section id="monthly-overview" className="summary-card" tabIndex={-1}>
           <div className="summary-header">
             <div className="summary-intro">
               <h2>Monthly summary</h2>
               <p>
-                See {monthLabel} {selectedYear} at a glance. Pick a month now and syncing will kick in
-                when Google sign-in and the database launch.
+                See {monthLabel} {selectedYear} at a glance. Totals reflect the transactions dated in this month.
               </p>
             </div>
             <div className="summary-controls">
@@ -1847,17 +1713,17 @@ export default function App() {
             <div className="stat">
               <span className="stat-label">Money coming in</span>
               <span className="stat-value">{formatCurrency(monthlyIncome)}</span>
-              <span className="stat-note">Average monthly income</span>
+              <span className="stat-note">Income recorded this month</span>
             </div>
             <div className="stat">
               <span className="stat-label">Money going out</span>
               <span className="stat-value">{formatCurrency(monthlyExpenses)}</span>
-              <span className="stat-note">Bills, plans, and recurring costs</span>
+              <span className="stat-note">Expenses and savings transfers</span>
             </div>
             <div className="stat">
               <span className="stat-label">Set aside for savings</span>
               <span className="stat-value">{formatCurrency(monthlySavings)}</span>
-              <span className="stat-note">What you’re tucking away every month</span>
+              <span className="stat-note">Included in money going out</span>
             </div>
             <div className="stat">
               <span className="stat-label">{netLabel}</span>
@@ -1977,7 +1843,7 @@ export default function App() {
             <div className="pinned-header">
               <div className="pinned-header__intro">
                 <h2>Pinned transactions</h2>
-                <p>Pin a transaction above to keep it handy. Syncing will follow once sign-in ships.</p>
+                <p>Keep the payments and goals you care about close at hand.</p>
                 <span className="pinned-header__note">
                   Showing totals per <strong>{pinnedCadenceDisplay[pinnedViewCadence]}</strong>.
                 </span>
@@ -2068,7 +1934,7 @@ export default function App() {
             <div className="insight-header">
               <span className="insight-kicker">Spending palette</span>
               <h2>Expenses by category</h2>
-              <p>Hover or tap to see which categories drive this window of spending.</p>
+              <p>Estimated spending over this window, based on the selected summary month.</p>
             </div>
             <div className="insight-controls">
               <label className="control-group" htmlFor="expenses-timeframe-start-month">
@@ -2148,7 +2014,7 @@ export default function App() {
             <div className="insight-header">
               <span className="insight-kicker">Budget pulse</span>
               <h2>How income is split</h2>
-              <p>See how your income covers costs, savings, and wiggle room for this timeframe.</p>
+              <p>Estimated allocation over this window, based on the selected summary month.</p>
             </div>
             <div className="insight-controls">
               <label className="control-group" htmlFor="allocation-timeframe-start-month">
@@ -2268,7 +2134,7 @@ export default function App() {
                 <div className="category-sidebar__transactions">
                   {activeSidebarCategory.transactions.map((transaction) => {
                     const isPinned = pinnedTransactionSet.has(transaction.id);
-                    const amountPrefix = transaction.flow === 'Expense' ? '-' : '+';
+                    const amountPrefix = transaction.flow === 'Income' ? '+' : '-';
                     const displayAmount = `${amountPrefix}${formatCurrency(transaction.amount)}`;
                     const amountClass = `transaction-amount ${transaction.flow.toLowerCase()}`;
                     const metaParts: string[] = [transaction.flow, transaction.cadence];
@@ -2361,8 +2227,7 @@ export default function App() {
             <div className="yearly-intro">
               <h2>Yearly breakdown</h2>
               <p>
-                Glance at {selectedYear} totals. Pick any year now and syncing will take over once
-                sign-in launches.
+                A projection for {selectedYear}, based on {monthLabel} activity multiplied by 12. One-time payments in this month are included in the estimate.
               </p>
             </div>
             <label className="control-group" htmlFor="yearly-year">

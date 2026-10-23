@@ -80,12 +80,12 @@ export function CategoryColumn({
   const renderTransaction = (transaction: Transaction) => {
     const isPinned = pinnedTransactionIds.has(transaction.id);
     const amountClass = `transaction-amount ${transaction.flow.toLowerCase()}`;
-    const amountPrefix = transaction.flow === 'Expense' ? '-' : '+';
+    const amountPrefix = transaction.flow === 'Income' ? '+' : '-';
     const displayAmount = `${amountPrefix}${formatCurrency(transaction.amount)}`;
     const metaParts: string[] = [transaction.flow, transaction.cadence];
 
     if (transaction.date) {
-      const parsed = new Date(transaction.date);
+      const parsed = new Date(`${transaction.date}T12:00:00`);
       if (!Number.isNaN(parsed.valueOf())) {
         metaParts.push(transactionDateFormatter.format(parsed));
       }
@@ -173,7 +173,7 @@ export function CategoryColumn({
       <header className="category-header">
         <div>
           <div className="category-title">{category.name}</div>
-          <div className="category-total">{formatCurrency(monthlyTotal)} per month</div>
+          <div className="category-total">{formatCurrency(monthlyTotal)} this month</div>
         </div>
         <span className="category-chip" style={chipStyle}>
           <span
